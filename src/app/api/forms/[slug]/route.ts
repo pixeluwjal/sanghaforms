@@ -70,10 +70,8 @@ export async function GET(
       createdAt: form.createdAt,
       settings: {
         customSlug: form.settings.customSlug,
-        // Include only public settings
         allowMultipleResponses: form.settings.allowMultipleResponses,
         enableProgressSave: form.settings.enableProgressSave,
-        // ADD THE NEW GROUP LINK SETTINGS HERE
         showGroupLinks: form.settings.showGroupLinks,
         whatsappGroupLink: form.settings.whatsappGroupLink,
         arrataiGroupLink: form.settings.arrataiGroupLink
@@ -130,14 +128,8 @@ export async function POST(
     }
 
     // Determine collection based on form type (SS or Leads)
-    const formType = form.settings.formType || 'ss'; // Default to 'ss' if not specified
+    const formType = form.settings.formType || 'ss';
     const collectionName = formType.toLowerCase() === 'leads' ? 'leads' : 'ss';
-
-    // Check if multiple responses are allowed
-    if (!form.settings.allowMultipleResponses) {
-      // You might want to add IP-based duplicate checking here
-      // For now, we'll allow all submissions
-    }
 
     // Get client information
     const ipAddress = request.headers.get('x-forwarded-for') || 
@@ -153,13 +145,36 @@ export async function POST(
       );
     }
 
-    // Create and save the response to the appropriate collection
+    // Create a map of field IDs to field details for quick lookup
+    const fieldMap = new Map();
+    form.sections.forEach((section: any) => {
+      section.fields.forEach((field: any) => {
+        fieldMap.set(field.id, {
+          type: field.type,
+          label: field.label
+        });
+      });
+    });
+
+    // Enhance responses with field information
+    const enhancedResponses = responses.map((response: any) => {
+      const fieldInfo = fieldMap.get(response.fieldId);
+      return {
+        fieldId: response.fieldId,
+        fieldType: fieldInfo?.type || 'unknown',
+        fieldLabel: fieldInfo?.label || response.fieldId,
+        value: response.value
+      };
+    });
+
+    // Create and save the response with complete field information
     const formResponse = new FormResponse({
       formId: form._id,
+      formTitle: form.title,
       formSlug: form.settings.customSlug || form._id.toString(),
       formType: formType,
       collection: collectionName,
-      responses: responses,
+      responses: enhancedResponses,
       submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
       ipAddress: ipAddress,
       userAgent: userAgent
@@ -174,7 +189,6 @@ export async function POST(
       formTitle: form.title,
       collection: collectionName,
       formType: formType,
-      // Optionally return group links in POST response too
       groupLinks: {
         showGroupLinks: form.settings.showGroupLinks,
         whatsappGroupLink: form.settings.whatsappGroupLink,

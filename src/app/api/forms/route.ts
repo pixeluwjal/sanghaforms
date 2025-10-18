@@ -1,4 +1,6 @@
+// app/api/forms/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 
@@ -10,6 +12,19 @@ export async function POST(request: NextRequest) {
     
     if (!title) {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    }
+
+    // ADD AUTH TO GET THE CREATOR ID
+    const token = request.cookies.get('token')?.value;
+    let createdBy = null;
+    
+    if (token) {
+      try {
+        const decoded = await verifyToken(token);
+        createdBy = decoded.adminId;
+      } catch (error) {
+        console.log('No valid token, creating form without creator');
+      }
     }
 
     const form = new Form({
@@ -27,7 +42,8 @@ export async function POST(request: NextRequest) {
         isActive: true
       },
       sections: [],
-      status: 'draft'
+      status: 'draft',
+      createdBy: createdBy // ADD THIS LINE
     });
 
     await form.save();

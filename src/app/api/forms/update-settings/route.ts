@@ -1,3 +1,4 @@
+// app/api/forms/update-settings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Form from '@/models/Form';
@@ -6,6 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { formId, status, settings, theme } = body;
+
+    console.log('🔄 Update settings API called:', { formId, status });
 
     if (!formId) {
       return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
@@ -17,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate slug availability if enabling custom slug
-    if (settings.enableCustomSlug && settings.customSlug) {
+    if (status === 'published' && settings.enableCustomSlug && settings.customSlug) {
       const slugCheckQuery: any = {
         _id: { $ne: new mongoose.Types.ObjectId(formId) },
         $or: [
@@ -61,13 +64,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
+    console.log('✅ Form updated successfully:', updatedForm._id);
+
     return NextResponse.json({ 
       success: true, 
       form: updatedForm 
     });
 
   } catch (error: any) {
-    console.error('Error updating form settings:', error);
+    console.error('❌ Error updating form settings:', error);
     return NextResponse.json({ 
       error: 'Internal server error: ' + error.message 
     }, { status: 500 });

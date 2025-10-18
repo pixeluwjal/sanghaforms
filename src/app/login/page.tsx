@@ -52,7 +52,7 @@ export default function LoginPage() {
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-[#00ADB5] rounded-full opacity-60"
+            className="absolute w-2 h-2 bg-indigo-300 rounded-full opacity-60"
             style={{
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
@@ -65,36 +65,36 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#222831] via-[#1a1f27] to-[#151920] relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#00ADB5] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#393E46] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#00ADB5] rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-500" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-500" />
       </div>
 
       {/* Floating Particles */}
       {renderParticles()}
 
-      <div className="relative z-10 max-w-md w-full space-y-8 p-10 bg-[#393E46]/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-[#00ADB5]/20 transform hover:scale-[1.02] transition-all duration-300">
+      <div className="relative z-10 max-w-md w-full space-y-8 p-10 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/60 transform hover:scale-[1.02] transition-all duration-300">
         {/* Logo/Header Section */}
         <div className="text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-[#00ADB5] to-[#0099a0] rounded-2xl flex items-center justify-center shadow-lg mb-4 transform hover:rotate-12 transition-transform duration-300">
-            <svg className="w-10 h-10 text-[#222831]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mb-4 transform hover:rotate-12 transition-transform duration-300">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-[#00ADB5] to-[#00d4e0] bg-clip-text text-transparent">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Welcome Back
           </h2>
-          <p className="mt-3 text-lg text-[#EEEEEE]/80 font-light">
+          <p className="mt-3 text-lg text-slate-600 font-light">
             Access your form dashboard
           </p>
         </div>
 
         <form className="mt-12 space-y-8" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-[#EEEEEE] px-6 py-4 rounded-2xl text-center backdrop-blur-sm transform hover:scale-[1.02] transition-all duration-200">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl text-center backdrop-blur-sm transform hover:scale-[1.02] transition-all duration-200">
               <div className="flex items-center justify-center space-x-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -107,12 +107,12 @@ export default function LoginPage() {
           <div className="space-y-6">
             {/* Email Input */}
             <div className="group">
-              <label htmlFor="email" className="block text-sm font-semibold text-[#EEEEEE] mb-3 ml-1">
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-3 ml-1">
                 Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-[#00ADB5] group-hover:text-[#00d4e0] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-indigo-500 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                   </svg>
                 </div>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-4 bg-[#222831]/80 border-2 border-[#393E46] rounded-2xl text-[#EEEEEE] placeholder-gray-400 focus:outline-none focus:border-[#00ADB5] focus:bg-[#222831] transition-all duration-300 backdrop-blur-sm group-hover:border-[#00ADB5]/50"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/80 border-2 border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all duration-300 backdrop-blur-sm group-hover:border-indigo-300"
                   placeholder="Enter your email"
                 />
               </div>
@@ -131,12 +131,12 @@ export default function LoginPage() {
 
             {/* Password Input */}
             <div className="group">
-              <label htmlFor="password" className="block text-sm font-semibold text-[#EEEEEE] mb-3 ml-1">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-3 ml-1">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-[#00ADB5] group-hover:text-[#00d4e0] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-indigo-500 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
@@ -147,7 +147,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-4 bg-[#222831]/80 border-2 border-[#393E46] rounded-2xl text-[#EEEEEE] placeholder-gray-400 focus:outline-none focus:border-[#00ADB5] focus:bg-[#222831] transition-all duration-300 backdrop-blur-sm group-hover:border-[#00ADB5]/50"
+                  className="block w-full pl-12 pr-4 py-4 bg-white/80 border-2 border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all duration-300 backdrop-blur-sm group-hover:border-indigo-300"
                   placeholder="Enter your password"
                 />
               </div>
@@ -158,12 +158,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="group relative w-full py-4 px-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-[#00ADB5] to-[#0099a0] text-[#222831] hover:from-[#00d4e0] hover:to-[#00ADB5] focus:outline-none focus:ring-4 focus:ring-[#00ADB5]/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl shadow-lg overflow-hidden"
+            className="group relative w-full py-4 px-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl shadow-lg overflow-hidden"
           >
             <div className="relative z-10 flex items-center justify-center space-x-3">
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -181,14 +181,14 @@ export default function LoginPage() {
             
             {/* Button Shine Effect */}
             <div className="absolute inset-0 overflow-hidden rounded-2xl">
-              <div className="absolute -inset-full top-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform skew-x-12 group-hover:animate-shine transition-all duration-1000" />
+              <div className="absolute -inset-full top-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform skew-x-12 group-hover:animate-shine transition-all duration-1000" />
             </div>
           </button>
         </form>
 
         {/* Footer */}
-        <div className="text-center pt-6 border-t border-[#00ADB5]/20">
-          <p className="text-sm text-[#EEEEEE]/60">
+        <div className="text-center pt-6 border-t border-slate-200/60">
+          <p className="text-sm text-slate-500">
             Secure admin access • Form Builder Pro
           </p>
         </div>

@@ -1,21 +1,43 @@
 // models/FormResponse.ts
 import mongoose from 'mongoose';
 
-const ResponseSchema = new mongoose.Schema({
-  formId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Form' },
-  formSlug: { type: String, required: true },
-  formType: { type: String, required: true, enum: ['ss', 'leads'], default: 'ss' },
-  collection: { type: String, required: true, enum: ['ss', 'leads'], default: 'ss' },
-  responses: mongoose.Schema.Types.Mixed,
-  submittedAt: { type: Date, default: Date.now },
-  ipAddress: String,
-  userAgent: String
+export interface IResponseValue {
+  fieldId: string;
+  fieldType: string;
+  fieldLabel: string;
+  value: string | string[] | number;
+}
+
+export interface IFormResponse extends mongoose.Document {
+  formId: mongoose.Types.ObjectId;
+  formTitle: string;
+  formSlug: string;
+  formType: string;
+  collection: string;
+  responses: IResponseValue[];
+  submittedAt: Date;
+  ipAddress: string;
+  userAgent: string;
+}
+
+const responseValueSchema = new mongoose.Schema({
+  fieldId: { type: String, required: true },
+  fieldType: { type: String, required: true },
+  fieldLabel: { type: String, required: true },
+  value: mongoose.Schema.Types.Mixed
 });
 
-// Add indexes for better query performance
-ResponseSchema.index({ formId: 1, submittedAt: -1 });
-ResponseSchema.index({ formSlug: 1 });
-ResponseSchema.index({ formType: 1 });
-ResponseSchema.index({ collection: 1 });
+const formResponseSchema = new mongoose.Schema({
+  formId: { type: mongoose.Schema.Types.ObjectId, ref: 'Form', required: true },
+  formTitle: { type: String, required: true },
+  formSlug: { type: String, required: true },
+  formType: { type: String, required: true },
+  collection: { type: String, required: true },
+  responses: [responseValueSchema],
+  ipAddress: { type: String, required: true },
+  userAgent: { type: String, required: true }
+}, {
+  timestamps: { createdAt: 'submittedAt', updatedAt: false }
+});
 
-export default mongoose.models.FormResponse || mongoose.model('FormResponse', ResponseSchema);
+export default mongoose.models.FormResponse || mongoose.model<IFormResponse>('FormResponse', formResponseSchema);

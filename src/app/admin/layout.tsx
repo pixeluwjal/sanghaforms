@@ -13,14 +13,17 @@ import {
   Menu,
   X,
   User,
-  Plus
+  Plus,
+  Eye
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Forms', href: '/admin/forms', icon: FileText },
+  { name: 'Responses', href: '/admin/responses', icon: Eye }, // Add this
   { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Create Form', href: '/admin/form/create', icon: Settings },
+  { name: 'Settings', href: '/admin/settings', icon: Settings }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
