@@ -1,11 +1,12 @@
 // app/admin/setup-account/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Shield, CheckCircle, XCircle } from 'lucide-react';
 
-export default function SetupAccount() {
+function SetupAccountContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -166,5 +167,17 @@ export default function SetupAccount() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SetupAccount() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    }>
+      <SetupAccountContent />
+    </Suspense>
   );
 }
