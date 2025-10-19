@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserPlus, Mail, Users, Shield, Trash2, MoreVertical, Edit, Calendar, RefreshCw } from 'lucide-react';
+import { UserPlus, Mail, Users, Shield, Trash2, MoreVertical, Edit, Calendar, RefreshCw, Search } from 'lucide-react';
 
 interface AdminUser {
   _id: string;
@@ -20,6 +20,9 @@ export default function UsersPage() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<'all' | 'super_admin' | 'admin'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'pending'>('all');
 
   useEffect(() => {
     fetchAdmins();
@@ -111,88 +114,98 @@ export default function UsersPage() {
     setActiveMenu(activeMenu === adminId ? null : adminId);
   };
 
+  // Filter admins based on search and filters
+  const filteredAdmins = admins.filter(admin => {
+    const matchesSearch = admin.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = filterRole === 'all' || admin.role === filterRole;
+    const matchesStatus = filterStatus === 'all' || admin.status === filterStatus;
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-indigo-100/50 p-4 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-indigo-100/50 p-3 sm:p-4 lg:p-6 xl:p-8">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 lg:space-y-8">
         {/* Toast Notification */}
         {message && (
-          <div className={`fixed top-4 right-4 z-50 p-4 rounded-2xl shadow-lg border transform animate-slide-in ${
+          <div className={`fixed top-3 sm:top-4 right-3 sm:right-4 z-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-lg border transform animate-slide-in max-w-xs sm:max-w-sm ${
             message.type === 'success' 
               ? 'bg-green-50 border-green-200 text-green-800' 
               : 'bg-red-50 border-red-200 text-red-800'
           }`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full ${
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                 message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
               }`} />
-              <p className="font-medium">{message.text}</p>
+              <p className="font-medium text-sm sm:text-base break-words">{message.text}</p>
             </div>
           </div>
         )}
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-3">
-            <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
+          <div className="space-y-2 sm:space-y-3">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
               Admin Users
             </h1>
-            <p className="text-gray-700 text-lg">
-              Manage admin users and their permissions across the platform
+            <p className="text-gray-700 text-base sm:text-lg">
+              Manage admin users and their permissions
             </p>
           </div>
           
           <button
             onClick={fetchAdmins}
             disabled={refreshing}
-            className="px-6 py-3 bg-white text-gray-700 border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md disabled:opacity-50"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-gray-700 border border-gray-200 rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md disabled:opacity-50 w-full lg:w-auto"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            <span className="sm:hidden">Refresh</span>
+            <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
           </button>
         </div>
 
-        {/* Invitation Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 p-6 shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <UserPlus className="w-6 h-6 text-white" />
+        {/* Invitation Card - Only show admin role option */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-gray-200/60 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Invite New Admin</h2>
-              <p className="text-gray-600 mt-1">Send invitation to new admin users</p>
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Invite New Admin</h2>
+              <p className="text-gray-600 text-sm sm:text-base">Send invitation to new admin users</p>
             </div>
           </div>
           
-          <form onSubmit={handleInvite} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-3">
+          <form onSubmit={handleInvite} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-2 sm:space-y-3">
                 <label className="block text-sm font-medium text-gray-700">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+                  <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter email address"
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 placeholder-gray-400 text-gray-900 font-medium shadow-sm hover:shadow-md"
+                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 placeholder-gray-400 text-gray-900 font-medium shadow-sm hover:shadow-md text-sm sm:text-base"
                     required
                   />
                 </div>
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <label className="block text-sm font-medium text-gray-700">
                   Role Permissions
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as 'super_admin' | 'admin')}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-gray-900 font-medium shadow-sm hover:shadow-md"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-gray-900 font-medium shadow-sm hover:shadow-md text-sm sm:text-base"
                 >
+                  {/* Only admin role is creatable */}
                   <option value="admin">Admin</option>
-                  <option value="super_admin">Super Admin</option>
                 </select>
               </div>
             </div>
@@ -200,12 +213,12 @@ export default function UsersPage() {
             <button
               type="submit"
               disabled={loading || !email}
-              className="px-8 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-3"
+              className="px-6 sm:px-8 py-2.5 sm:py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl sm:rounded-2xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto text-sm sm:text-base"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
               ) : (
-                <Mail className="w-5 h-5" />
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
               Send Invitation
             </button>
@@ -213,55 +226,95 @@ export default function UsersPage() {
         </div>
 
         {/* Admin Users Card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="p-6 border-b border-gray-200/60">
-            <div className="flex items-center justify-between">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="p-4 sm:p-6 border-b border-gray-200/60">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Users className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Admin Users</h2>
-                  <p className="text-gray-600 mt-1">{admins.length} team members</p>
+                <div className="min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Users</h2>
+                  <p className="text-gray-600 text-sm sm:text-base">
+                    {filteredAdmins.length} of {admins.length} team members
+                  </p>
+                </div>
+              </div>
+
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                {/* Search */}
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search admins..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-sm"
+                  />
+                </div>
+
+                {/* Filters */}
+                <div className="flex gap-2">
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value as any)}
+                    className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-sm flex-1"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                    className="px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-sm flex-1"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                  </select>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="p-6">
-            {admins.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {admins.map((admin, index) => (
+          <div className="p-3 sm:p-4 lg:p-6">
+            {filteredAdmins.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                {filteredAdmins.map((admin, index) => (
                   <div 
                     key={admin._id}
-                    className="group bg-white rounded-2xl p-6 border border-gray-200/60 hover:border-purple-200 hover:shadow-lg transition-all duration-500 hover:scale-105 animate-fade-in"
+                    className="group bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200/60 hover:border-purple-200 hover:shadow-lg transition-all duration-500 hover:scale-105 animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${
                           admin.role === 'super_admin' 
                             ? 'bg-gradient-to-br from-purple-500 to-indigo-600' 
                             : 'bg-gradient-to-br from-blue-500 to-blue-600'
                         }`}>
-                          <Shield className="w-6 h-6 text-white" />
+                          <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 text-lg truncate">
+                          <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate" title={admin.email}>
                             {admin.email}
                           </h3>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                          <div className="flex flex-wrap gap-1 sm:gap-2 mt-1 sm:mt-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               admin.role === 'super_admin' 
-                                ? 'bg-purple-100 text-purple-700 shadow-sm' 
-                                : 'bg-blue-100 text-blue-700 shadow-sm'
+                                ? 'bg-purple-100 text-purple-700' 
+                                : 'bg-blue-100 text-blue-700'
                             }`}>
                               {admin.role.replace('_', ' ').toUpperCase()}
                             </span>
-                            <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               admin.status === 'active' 
-                                ? 'bg-green-100 text-green-700 shadow-sm' 
-                                : 'bg-amber-100 text-amber-700 shadow-sm'
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-amber-100 text-amber-700'
                             }`}>
                               {admin.status.toUpperCase()}
                             </span>
@@ -269,48 +322,53 @@ export default function UsersPage() {
                         </div>
                       </div>
                       
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <button 
                           onClick={() => toggleMenu(admin._id)}
-                          className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                          className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-colors"
                         >
-                          <MoreVertical className="w-5 h-5 text-gray-400" />
+                          <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                         </button>
 
                         {/* Dropdown Menu */}
                         {activeMenu === admin._id && (
-                          <div className="absolute right-0 top-10 z-10 w-48 bg-white rounded-2xl shadow-lg border border-gray-200 py-2 animate-dropdown">
-                            <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors">
-                              <Edit className="w-4 h-4" />
-                              Edit Permissions
+                          <div className="absolute right-0 top-8 sm:top-10 z-10 w-36 sm:w-48 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 py-1 sm:py-2 animate-dropdown">
+                            <button className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 sm:gap-3 transition-colors">
+                              <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                              Edit
                             </button>
                             <button
                               onClick={() => deleteAdmin(admin._id)}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                              className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 sm:gap-3 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
-                              Remove Admin
+                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                              Remove
                             </button>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mt-4 pt-4 border-t border-gray-100">
-                      <Calendar className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       <span>Joined {new Date(admin.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-indigo-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Users className="w-10 h-10 text-purple-600" />
+              <div className="text-center py-8 sm:py-12 lg:py-16">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-purple-100 to-indigo-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
+                  <Users className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-purple-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">No Admin Users</h3>
-                <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto leading-relaxed">
-                  Get started by inviting your first admin user to help manage the platform.
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
+                  {admins.length === 0 ? 'No Admin Users' : 'No Results Found'}
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base lg:text-lg max-w-md mx-auto leading-relaxed px-4">
+                  {admins.length === 0 
+                    ? 'Get started by inviting your first admin user to help manage the platform.'
+                    : 'Try adjusting your search or filters to find what you\'re looking for.'
+                  }
                 </p>
               </div>
             )}

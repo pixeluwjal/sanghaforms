@@ -14,38 +14,74 @@ import {
   ChevronUp,
   X,
   RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Users
 } from 'lucide-react';
 
 interface FormResponse {
   _id: string;
   formId: string;
   formTitle: string;
-  formSlug: string;
   formType: string;
   collection: string;
-  responses: Array<{
-    fieldId: string;
-    fieldType: string;
-    fieldLabel: string;
-    value: string | string[];
-  }>;
   submittedAt: string;
   ipAddress: string;
   userAgent: string;
+  responses: {
+    [key: string]: {
+      label: string;
+      value: string;
+      type: string;
+      details?: any;
+    };
+  };
+  rawResponses?: any[];
 }
 
 interface Form {
   _id: string;
   title: string;
-  settings: {
-    customSlug?: string;
-  };
+  sections: Array<{
+    fields: Array<{
+      id: string;
+      label: string;
+      type: string;
+    }>;
+  }>;
+}
+
+interface Organization {
+  _id: string;
+  name: string;
+  khandas: Array<{
+    _id: string;
+    name: string;
+    code: string;
+    valays: Array<{
+      _id: string;
+      name: string;
+      milans: string[];
+    }>;
+  }>;
+}
+
+interface SanghaMapping {
+  vibhaags: Map<string, string>;
+  khandas: Map<string, { name: string; vibhaagId: string }>;
+  valayas: Map<string, { name: string; khandaId: string }>;
+  milans: Map<string, { name: string; valayaId: string }>;
 }
 
 export default function ResponsesPage() {
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [sanghaMapping, setSanghaMapping] = useState<SanghaMapping>({
+    vibhaags: new Map(),
+    khandas: new Map(),
+    valayas: new Map(),
+    milans: new Map()
+  });
   const [loading, setLoading] = useState(true);
   const [selectedForm, setSelectedForm] = useState<string>('all');
   const [dateRange, setDateRange] = useState<string>('all');
@@ -75,30 +111,83 @@ export default function ResponsesPage() {
     setToast({ message, type });
   };
 
+  // Fetch organization data and create mapping
+  const fetchOrganizationData = async (): Promise<SanghaMapping> => {
+    try {
+      const response = await fetch('/api/organization');
+      if (!response.ok) throw new Error('Failed to fetch organization data');
+      
+      const data = await response.json();
+      const orgs: Organization[] = data.organizations || data;
+      
+      const mapping: SanghaMapping = {
+        vibhaags: new Map(),
+        khandas: new Map(),
+        valayas: new Map(),
+        milans: new Map()
+      };
+
+      orgs.forEach(org => {
+        // Map vibhaags
+        mapping.vibhaags.set(org._id, org.name);
+        
+        // Map khandas
+        org.khandas?.forEach(khanda => {
+          mapping.khandas.set(khanda._id, {
+            name: khanda.name,
+            vibhaagId: org._id
+          });
+          
+          // Map valayas
+          khanda.valays?.forEach(valaya => {
+            mapping.valayas.set(valaya._id, {
+              name: valaya.name,
+              khandaId: khanda._id
+            });
+            
+            // Map milans
+            valaya.milans?.forEach((milan, index) => {
+              mapping.milans.set(milan, {
+                name: milan,
+                valayaId: valaya._id
+              });
+            });
+          });
+        });
+      });
+
+      return mapping;
+    } catch (error) {
+      console.error('Error fetching organization data:', error);
+      return {
+        vibhaags: new Map(),
+        khandas: new Map(),
+        valayas: new Map(),
+        milans: new Map()
+      };
+    }
+  };
+
   const fetchData = async () => {
     try {
-      console.log('🔄 Fetching responses and forms...');
+      console.log('🔄 Fetching responses, forms, and organization data...');
       setRefreshing(true);
       
-      const [responsesRes, formsRes] = await Promise.all([
-        fetch('/api/admin/responses'),
-        fetch('/api/admin/forms')
-      ]);
-
+      // Fetch organization data first
+      const orgMapping = await fetchOrganizationData();
+      setSanghaMapping(orgMapping);
+      
+      // Then fetch responses
+      const responsesRes = await fetch('/api/admin/responses');
+      
       if (responsesRes.ok) {
-        const responsesData = await responsesRes.json();
-        setResponses(responsesData.responses || []);
+        const data = await responsesRes.json();
+        console.log('📦 Responses data:', data);
+        setResponses(data.responses || []);
+        setForms(data.forms || []);
       } else {
         console.error('❌ Failed to fetch responses');
         showToast('Failed to load responses', 'error');
-      }
-
-      if (formsRes.ok) {
-        const formsData = await formsRes.json();
-        setForms(formsData.forms || []);
-      } else {
-        console.error('❌ Failed to fetch forms');
-        showToast('Failed to load forms', 'error');
       }
     } catch (error) {
       console.error('❌ Error fetching data:', error);
@@ -109,58 +198,116 @@ export default function ResponsesPage() {
     }
   };
 
+  // Helper function to get Sangha hierarchy names
+  const getSanghaName = (id: string, type: 'vibhaag' | 'khanda' | 'valaya' | 'milan'): string => {
+    switch (type) {
+      case 'vibhaag':
+        return sanghaMapping.vibhaags.get(id) || id;
+      case 'khanda':
+        return sanghaMapping.khandas.get(id)?.name || id;
+      case 'valaya':
+        return sanghaMapping.valayas.get(id)?.name || id;
+      case 'milan':
+        return sanghaMapping.milans.get(id)?.name || id;
+      default:
+        return id;
+    }
+  };
+
+  // Enhanced response formatter to include Sangha names
+  const formatResponseWithSanghaNames = (response: FormResponse): FormResponse => {
+    const formattedResponses = { ...response.responses };
+    
+    Object.entries(formattedResponses).forEach(([key, field]) => {
+      if (field.type === 'sangha_hierarchy' && field.details) {
+        const details = { ...field.details };
+        
+        // Replace IDs with names
+        if (details.vibhaag) {
+          details.vibhaagName = getSanghaName(details.vibhaag, 'vibhaag');
+        }
+        if (details.khanda) {
+          details.khandaName = getSanghaName(details.khanda, 'khanda');
+        }
+        if (details.valaya) {
+          details.valayaName = getSanghaName(details.valaya, 'valaya');
+        }
+        if (details.milan) {
+          details.milanName = getSanghaName(details.milan, 'milan');
+        }
+        
+        // Update the value to show names instead of IDs
+        field.value = `${details.vibhaagName || details.vibhaag} > ${details.khandaName || details.khanda} > ${details.valayaName || details.valaya} > ${details.milanName || details.milan}`;
+        field.details = details;
+      }
+    });
+    
+    return {
+      ...response,
+      responses: formattedResponses
+    };
+  };
+
   // Filter responses based on selections
-  const filteredResponses = responses.filter(response => {
-    if (selectedForm !== 'all' && response.formId !== selectedForm) {
-      return false;
-    }
-
-    if (dateRange !== 'all') {
-      const responseDate = new Date(response.submittedAt);
-      const now = new Date();
-      const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
-      if (responseDate < daysAgo) {
+  const filteredResponses = responses
+    .map(response => formatResponseWithSanghaNames(response))
+    .filter(response => {
+      if (selectedForm !== 'all' && response.formId !== selectedForm) {
         return false;
       }
-    }
 
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const hasMatchingResponse = response.responses.some(r => 
-        String(r.value).toLowerCase().includes(searchLower) ||
-        r.fieldLabel.toLowerCase().includes(searchLower)
-      );
-      const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
-      const matchesIP = response.ipAddress.toLowerCase().includes(searchLower);
-      
-      if (!hasMatchingResponse && !matchesFormTitle && !matchesIP) {
-        return false;
+      if (dateRange !== 'all') {
+        const responseDate = new Date(response.submittedAt);
+        const now = new Date();
+        const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
+        if (responseDate < daysAgo) {
+          return false;
+        }
       }
-    }
 
-    return true;
-  });
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const hasMatchingResponse = Object.values(response.responses).some(field => 
+          String(field.value).toLowerCase().includes(searchLower) ||
+          field.label.toLowerCase().includes(searchLower)
+        );
+        const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
+        const matchesIP = response.ipAddress.toLowerCase().includes(searchLower);
+        
+        if (!hasMatchingResponse && !matchesFormTitle && !matchesIP) {
+          return false;
+        }
+      }
+
+      return true;
+    });
 
   // Pagination
   const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedResponses = filteredResponses.slice(startIndex, startIndex + itemsPerPage);
 
-  // Enhanced CSV Export
+  // Enhanced CSV Export with Sangha names
   const exportToCSV = () => {
     try {
       const dataToExport = selectedResponses.size > 0 
         ? filteredResponses.filter(r => selectedResponses.has(r._id))
         : filteredResponses;
 
+      if (dataToExport.length === 0) {
+        showToast('No data to export', 'error');
+        return;
+      }
+
       const allFieldLabels = new Set<string>();
       dataToExport.forEach(response => {
-        response.responses.forEach(r => allFieldLabels.add(r.fieldLabel));
+        Object.values(response.responses).forEach(field => allFieldLabels.add(field.label));
       });
       const fieldLabels = Array.from(allFieldLabels);
 
       const headers = [
         'Response ID',
+        'Form Title',
         'Submitted At', 
         'IP Address',
         ...fieldLabels
@@ -169,6 +316,7 @@ export default function ResponsesPage() {
       const csvData = dataToExport.map(response => {
         const baseData = [
           response._id,
+          response.formTitle,
           new Date(response.submittedAt).toLocaleString('en-US', {
             year: 'numeric',
             month: '2-digit',
@@ -181,14 +329,10 @@ export default function ResponsesPage() {
         ];
         
         const responseData = fieldLabels.map(fieldLabel => {
-          const fieldResponse = response.responses.find(r => r.fieldLabel === fieldLabel);
-          if (!fieldResponse) return '';
+          const field = Object.values(response.responses).find(f => f.label === fieldLabel);
+          if (!field) return '';
           
-          let value = fieldResponse.value;
-          if (Array.isArray(value)) {
-            value = value.join('; ');
-          }
-          return String(value).replace(/"/g, '""').replace(/\n/g, ' ');
+          return String(field.value).replace(/"/g, '""').replace(/\n/g, ' ');
         });
 
         return [...baseData, ...responseData];
@@ -217,21 +361,27 @@ export default function ResponsesPage() {
     }
   };
 
-  // Enhanced Excel Export
+  // Enhanced Excel Export with Sangha names
   const exportToExcel = () => {
     try {
       const dataToExport = selectedResponses.size > 0 
         ? filteredResponses.filter(r => selectedResponses.has(r._id))
         : filteredResponses;
 
+      if (dataToExport.length === 0) {
+        showToast('No data to export', 'error');
+        return;
+      }
+
       const allFieldLabels = new Set<string>();
       dataToExport.forEach(response => {
-        response.responses.forEach(r => allFieldLabels.add(r.fieldLabel));
+        Object.values(response.responses).forEach(field => allFieldLabels.add(field.label));
       });
       const fieldLabels = Array.from(allFieldLabels);
 
       const headers = [
         'Response ID',
+        'Form Title',
         'Submitted At', 
         'IP Address',
         ...fieldLabels
@@ -240,6 +390,7 @@ export default function ResponsesPage() {
       const excelData = dataToExport.map(response => {
         const baseData = [
           response._id,
+          response.formTitle,
           new Date(response.submittedAt).toLocaleString('en-US', {
             year: 'numeric',
             month: '2-digit',
@@ -252,14 +403,10 @@ export default function ResponsesPage() {
         ];
         
         const responseData = fieldLabels.map(fieldLabel => {
-          const fieldResponse = response.responses.find(r => r.fieldLabel === fieldLabel);
-          if (!fieldResponse) return '';
+          const field = Object.values(response.responses).find(f => f.label === fieldLabel);
+          if (!field) return '';
           
-          let value = fieldResponse.value;
-          if (Array.isArray(value)) {
-            value = value.join(', ');
-          }
-          return String(value);
+          return String(field.value);
         });
 
         return [...baseData, ...responseData];
@@ -327,7 +474,7 @@ export default function ResponsesPage() {
   const getTableColumns = () => {
     const columns = new Set<string>();
     filteredResponses.forEach(response => {
-      response.responses.forEach(r => columns.add(r.fieldLabel));
+      Object.values(response.responses).forEach(field => columns.add(field.label));
     });
     return Array.from(columns);
   };
@@ -550,16 +697,24 @@ export default function ResponsesPage() {
                         />
                       </th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
+                        Form
+                      </th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
                         Submitted
                       </th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
                         IP Address
                       </th>
-                      {tableColumns.map(column => (
+                      {tableColumns.slice(0, 3).map(column => (
                         <th key={column} className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50 truncate max-w-xs">
                           {column}
                         </th>
                       ))}
+                      {tableColumns.length > 3 && (
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
+                          +{tableColumns.length - 3} more
+                        </th>
+                      )}
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50 rounded-r-2xl">
                         Actions
                       </th>
@@ -582,6 +737,11 @@ export default function ResponsesPage() {
                             />
                           </td>
                           <td className="px-4 py-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {response.formTitle}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
                             <div className="text-sm text-gray-900 font-medium">
                               {new Date(response.submittedAt).toLocaleDateString()}
                             </div>
@@ -594,20 +754,21 @@ export default function ResponsesPage() {
                               {response.ipAddress}
                             </div>
                           </td>
-                          {tableColumns.map(column => {
-                            const field = response.responses.find(r => r.fieldLabel === column);
+                          {tableColumns.slice(0, 3).map(column => {
+                            const field = Object.values(response.responses).find(f => f.label === column);
                             return (
                               <td key={column} className="px-4 py-4 text-sm text-gray-700 max-w-xs">
-                                <div className="truncate" title={field ? (Array.isArray(field.value) ? field.value.join(', ') : String(field.value)) : '-'}>
-                                  {field ? (
-                                    Array.isArray(field.value) 
-                                      ? field.value.join(', ')
-                                      : String(field.value)
-                                  ) : '-'}
+                                <div className="truncate" title={field ? String(field.value) : '-'}>
+                                  {field ? String(field.value) : '-'}
                                 </div>
                               </td>
                             );
                           })}
+                          {tableColumns.length > 3 && (
+                            <td className="px-4 py-4 text-sm text-gray-500">
+                              View details →
+                            </td>
+                          )}
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
                               <button
@@ -626,7 +787,7 @@ export default function ResponsesPage() {
                         {/* Expanded Row Details */}
                         {expandedRow === response._id && (
                           <tr className="bg-gray-50/50">
-                            <td colSpan={tableColumns.length + 4} className="px-4 py-6">
+                            <td colSpan={tableColumns.length + 5} className="px-4 py-6">
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Response Data */}
                                 <div>
@@ -634,24 +795,46 @@ export default function ResponsesPage() {
                                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                       <FileText className="w-4 h-4 text-blue-600" />
                                     </div>
-                                    All Responses ({response.responses.length})
+                                    All Responses ({Object.keys(response.responses).length})
                                   </h5>
                                   <div className="space-y-3 max-h-96 overflow-y-auto">
-                                    {response.responses.map((field, index) => (
-                                      <div key={index} className="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm">
+                                    {Object.entries(response.responses).map(([fieldId, field]) => (
+                                      <div key={fieldId} className="bg-white rounded-xl p-4 border-l-4 border-blue-500 shadow-sm">
                                         <div className="flex items-start justify-between mb-2">
                                           <div className="font-medium text-gray-900 text-sm">
-                                            {field.fieldLabel}
+                                            {field.label}
                                           </div>
                                           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full capitalize">
-                                            {field.fieldType}
+                                            {field.type.replace('_', ' ')}
                                           </span>
                                         </div>
                                         <div className="text-gray-700 text-sm mt-2">
-                                          {Array.isArray(field.value) 
-                                            ? field.value.join(', ')
-                                            : String(field.value)
-                                          }
+                                          {field.type === 'sangha_hierarchy' && field.details ? (
+                                            <div className="space-y-2">
+                                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                  <span className="font-medium text-gray-600">Vibhaag:</span>
+                                                  <div className="text-gray-900 mt-1">{field.details.vibhaagName || field.details.vibhaag || 'Not provided'}</div>
+                                                </div>
+                                                <div>
+                                                  <span className="font-medium text-gray-600">Khanda:</span>
+                                                  <div className="text-gray-900 mt-1">{field.details.khandaName || field.details.khanda || 'Not provided'}</div>
+                                                </div>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                  <span className="font-medium text-gray-600">Valaya:</span>
+                                                  <div className="text-gray-900 mt-1">{field.details.valayaName || field.details.valaya || 'Not provided'}</div>
+                                                </div>
+                                                <div>
+                                                  <span className="font-medium text-gray-600">Milan:</span>
+                                                  <div className="text-gray-900 mt-1">{field.details.milanName || field.details.milan || 'Not provided'}</div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            String(field.value)
+                                          )}
                                         </div>
                                       </div>
                                     ))}
@@ -683,8 +866,8 @@ export default function ResponsesPage() {
                                             </div>
                                           </div>
                                           <div>
-                                            <span className="font-medium text-gray-700">Form Slug:</span>
-                                            <div className="text-gray-900 mt-1 font-mono text-sm">{response.formSlug}</div>
+                                            <span className="font-medium text-gray-700">Form Type:</span>
+                                            <div className="text-gray-900 mt-1 capitalize">{response.formType}</div>
                                           </div>
                                           <div>
                                             <span className="font-medium text-gray-700">Collection:</span>

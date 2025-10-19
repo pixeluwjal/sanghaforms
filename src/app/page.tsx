@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Star, Zap, Users, Shield, FileText } from "lucide-react";
+import { ArrowRight, CheckCircle, Star, Zap, Users, Shield, FileText, Heart, Sparkles, Rocket } from "lucide-react";
 
 export default function Home() {
   return (
@@ -12,13 +12,13 @@ export default function Home() {
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900">FormBuilder</span>
+              <span className="text-xl font-bold text-slate-900">Sangh Forms</span>
             </div>
             
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-slate-600 hover:text-slate-900 transition-colors">Features</a>
               <a href="#examples" className="text-slate-600 hover:text-slate-900 transition-colors">Examples</a>
-              <a href="#pricing" className="text-slate-600 hover:text-slate-900 transition-colors">Pricing</a>
+              <a href="#community" className="text-slate-600 hover:text-slate-900 transition-colors">Community</a>
             </div>
             
             <div className="flex items-center gap-4">
@@ -44,20 +44,20 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full text-sm font-medium mb-8">
-              <Star className="w-4 h-4 fill-indigo-500" />
-              Trusted by 10,000+ form creators
+              <Heart className="w-4 h-4 fill-indigo-500" />
+              Built for Yuva Sangha Community
             </div>
             
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6">
-              Build Beautiful Forms
+              Beautiful Forms for
               <span className="block bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                In Minutes
+                Sangha Community
               </span>
             </h1>
             
             <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-12 leading-relaxed">
-              Create stunning, responsive forms with our drag-and-drop builder. 
-              No coding required. Collect responses, analyze data, and automate workflows.
+              Create stunning, responsive forms specifically designed for Yuva Sangha initiatives. 
+              Collect registrations, manage events, and engage your community effortlessly.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
@@ -76,16 +76,16 @@ export default function Home() {
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-2xl mx-auto">
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900 mb-2">10K+</div>
-                <div className="text-slate-600">Forms Created</div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">500+</div>
+                <div className="text-slate-600">Sanghas Using</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900 mb-2">500K+</div>
-                <div className="text-slate-600">Responses Collected</div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">50K+</div>
+                <div className="text-slate-600">Registrations</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900 mb-2">99.9%</div>
-                <div className="text-slate-600">Uptime</div>
+                <div className="text-3xl font-bold text-slate-900 mb-2">100%</div>
+                <div className="text-slate-600">Community Focused</div>
               </div>
             </div>
           </div>
@@ -97,17 +97,17 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              Everything You Need
+              Built for Sangha Needs
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Powerful features to create, manage, and analyze your forms
+              Specialized features designed specifically for Yuva Sangha community management
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-slate-50 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mb-6">
+              <div key={index} className="bg-slate-50 rounded-2xl p-8 hover:shadow-lg transition-all duration-300 group">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <feature.icon className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
@@ -122,25 +122,63 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Examples Section */}
-      <section id="examples" className="py-20 bg-slate-50">
+      {/* Community Section */}
+      <section id="community" className="py-20 bg-gradient-to-br from-indigo-50 to-purple-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">
-              Beautiful Form Examples
+              Loved by Sangha Community
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              See what you can create with our form builder
+              Join thousands of Yuva volunteers who trust Sangh Forms for their community initiatives
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <div key={index} className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">{testimonial.initials}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
+                    <p className="text-slate-600 text-sm">{testimonial.role}</p>
+                  </div>
+                </div>
+                <p className="text-slate-700 italic">"{testimonial.quote}"</p>
+                <div className="flex gap-1 mt-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Examples Section */}
+      <section id="examples" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+              Perfect for Sangha Activities
+            </h2>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+              Create beautiful forms for all your community events and initiatives
             </p>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               {examples.map((example, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  <CheckCircle className="w-6 h-6 text-green-500 mt-1 flex-shrink-0" />
+                <div key={index} className="flex items-start gap-4 group">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  </div>
                   <div>
-                    <h4 className="font-semibold text-slate-900 mb-2">
+                    <h4 className="font-semibold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
                       {example.title}
                     </h4>
                     <p className="text-slate-600">
@@ -151,36 +189,48 @@ export default function Home() {
               ))}
             </div>
             
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
+            <div className="bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl p-8 shadow-lg border border-slate-200">
               <div className="space-y-4">
-                <div className="bg-slate-100 h-12 rounded-lg animate-pulse"></div>
-                <div className="bg-slate-100 h-4 rounded w-3/4 animate-pulse"></div>
-                <div className="bg-slate-100 h-12 rounded-lg animate-pulse"></div>
-                <div className="bg-slate-100 h-4 rounded w-1/2 animate-pulse"></div>
-                <div className="bg-slate-100 h-32 rounded-lg animate-pulse"></div>
-                <div className="bg-indigo-500 h-12 rounded-lg animate-pulse"></div>
+                <div className="bg-white h-12 rounded-lg border border-slate-200 shadow-sm"></div>
+                <div className="bg-white h-4 rounded w-3/4 text-transparent">Form field label</div>
+                <div className="bg-white h-12 rounded-lg border border-slate-200 shadow-sm"></div>
+                <div className="bg-white h-4 rounded w-1/2 text-transparent">Another field</div>
+                <div className="bg-white h-32 rounded-lg border border-slate-200 shadow-sm"></div>
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-12 rounded-lg shadow-lg flex items-center justify-center">
+                  <span className="text-white font-semibold">Submit Registration</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Final CTA Section */}
       <section className="py-20 bg-gradient-to-r from-indigo-500 to-purple-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <Rocket className="w-4 h-4" />
+            Start Your Sangha Journey Today
+          </div>
+          
           <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to Create Your First Form?
+            Ready to Transform Your Community Engagement?
           </h2>
           <p className="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of form creators who trust FormBuilder for their data collection needs.
+            Join hundreds of Yuva Sanghas already using our platform to create beautiful, effective forms for their community initiatives.
           </p>
-          <Link 
-            href="/login" 
-            className="inline-flex items-center gap-3 bg-white text-indigo-600 px-8 py-4 rounded-2xl hover:bg-slate-100 transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl"
-          >
-            Get Started Free
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/login" 
+              className="inline-flex items-center gap-3 bg-white text-indigo-600 px-8 py-4 rounded-2xl hover:bg-slate-100 transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl"
+            >
+              <Sparkles className="w-5 h-5" />
+              Start Free Today
+            </Link>
+            <button className="border-2 border-white text-white px-8 py-4 rounded-2xl hover:bg-white/10 transition-all duration-300 font-semibold text-lg">
+              Watch Demo
+            </button>
+          </div>
         </div>
       </section>
 
@@ -193,43 +243,43 @@ export default function Home() {
                 <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">FormBuilder</span>
+                <span className="text-xl font-bold text-white">Sangh Forms</span>
               </div>
               <p className="text-slate-400">
-                Build beautiful forms that convert. No coding required.
+                Beautiful forms built for Yuva Sangha community. Engage, register, and grow together.
               </p>
             </div>
             
             <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <h4 className="text-white font-semibold mb-4">Platform</h4>
               <ul className="space-y-2">
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#examples" className="hover:text-white transition-colors">Examples</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#community" className="hover:text-white transition-colors">Community</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-white font-semibold mb-4">Resources</h4>
+              <h4 className="text-white font-semibold mb-4">Support</h4>
               <ul className="space-y-2">
                 <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Support</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Community</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-white font-semibold mb-4">Company</h4>
+              <h4 className="text-white font-semibold mb-4">Sangha</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">About Yuva</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Initiatives</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Get Involved</a></li>
               </ul>
             </div>
           </div>
           
           <div className="border-t border-slate-800 mt-12 pt-8 text-center">
-            <p>&copy; 2024 FormBuilder. All rights reserved.</p>
+            <p>Built with ❤️ for the Yuva Sangha Community</p>
           </div>
         </div>
       </footer>
@@ -239,56 +289,77 @@ export default function Home() {
 
 const features = [
   {
-    icon: Zap,
-    title: "Drag & Drop Builder",
-    description: "Create beautiful forms in minutes with our intuitive drag-and-drop interface. No coding skills required."
+    icon: Users,
+    title: "Sangha Hierarchy",
+    description: "Built-in support for Vibhaag, Khanda, Valaya, and Milan hierarchy. Perfect for organizational structure."
   },
   {
     icon: Shield,
-    title: "Secure & Reliable",
-    description: "Enterprise-grade security with 99.9% uptime. Your data is safe with us."
+    title: "Secure & Private",
+    description: "Enterprise-grade security ensuring all community data remains safe and confidential."
   },
   {
-    icon: Users,
-    title: "Team Collaboration",
-    description: "Work together with your team in real-time. Share forms and manage responses collaboratively."
+    icon: Zap,
+    title: "Instant Setup",
+    description: "Get started in minutes with pre-built templates designed for Sangha activities and events."
+  },
+  {
+    icon: Heart,
+    title: "Community First",
+    description: "Built specifically for Yuva Sangha needs with features that matter to your community."
   },
   {
     icon: FileText,
-    title: "Multiple Form Types",
-    description: "Create contact forms, surveys, registrations, payment forms, and more with pre-built templates."
-  },
-  {
-    icon: Star,
-    title: "Custom Branding",
-    description: "Add your logo, colors, and fonts to match your brand identity perfectly."
+    title: "Smart Forms",
+    description: "Conditional logic, file uploads, and custom validation for all your registration needs."
   },
   {
     icon: CheckCircle,
-    title: "Advanced Analytics",
-    description: "Get insights into your form performance with detailed analytics and response tracking."
+    title: "Real-time Analytics",
+    description: "Track registrations, attendance, and engagement with beautiful, easy-to-understand dashboards."
   }
 ];
 
 const examples = [
   {
-    title: "Contact Forms",
-    description: "Beautiful contact forms with spam protection and automatic email notifications."
+    title: "Yuva Training Registration",
+    description: "Complete registration forms for workshops, shibirs, and training programs with hierarchical data capture."
   },
   {
-    title: "Event Registrations",
-    description: "Create event registration forms with payment integration and attendee management."
+    title: "Event Participation",
+    description: "Manage event registrations with automatic confirmation emails and attendance tracking."
   },
   {
-    title: "Customer Surveys",
-    description: "Design engaging surveys with conditional logic and real-time response tracking."
+    title: "Volunteer Sign-ups",
+    description: "Coordinate volunteer efforts with custom forms that capture skills, availability, and preferences."
   },
   {
-    title: "Lead Generation",
-    description: "Capture leads with optimized forms that integrate with your CRM and marketing tools."
+    title: "Community Feedback",
+    description: "Collect valuable feedback from your Sangha members to improve programs and initiatives."
   },
   {
-    title: "Feedback Forms",
-    description: "Collect customer feedback with rating scales, comment boxes, and sentiment analysis."
+    title: "Membership Management",
+    description: "Streamline new member onboarding with automated forms and database integration."
+  }
+];
+
+const testimonials = [
+  {
+    name: "Rajesh Kumar",
+    role: "Yuva Pramukh, Bengaluru Dakshin",
+    initials: "RK",
+    quote: "Sangh Forms transformed how we manage our Yuva registrations. The hierarchy support is perfect for our organizational structure!"
+  },
+  {
+    name: "Priya Sharma",
+    role: "Event Coordinator, Mumbai Vibhaag",
+    initials: "PS",
+    quote: "Beautiful forms that our Yuva members love to fill. The analytics help us plan better events."
+  },
+  {
+    name: "Amit Patel",
+    role: "Digital Head, Delhi Sangh",
+    initials: "AP",
+    quote: "Finally, a form builder that understands Sangha needs. The community-focused features are incredible."
   }
 ];

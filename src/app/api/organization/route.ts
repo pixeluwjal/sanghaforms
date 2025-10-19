@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
     const organizations = await Organization.find();
 
     if (organizations.length === 0) {
-      // Seed data based on Excel structure - FIXED: milans as strings
       const initialData = [
         {
           _id: "vibhaaga_001",
@@ -276,7 +275,6 @@ export async function GET(request: NextRequest) {
           ]
         }
       ];
-
       await Organization.insertMany(initialData);
       return NextResponse.json({ 
         success: true,

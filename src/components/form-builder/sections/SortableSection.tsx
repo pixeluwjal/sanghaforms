@@ -75,7 +75,7 @@ export default function SortableSection({
     <motion.div
       ref={setNodeRef}
       style={style}
-      className={`group relative bg-white/90 backdrop-blur-sm rounded-3xl border-2 transition-all duration-300 ${
+      className={`group relative bg-white/90 backdrop-blur-sm rounded-2xl md:rounded-3xl border-2 transition-all duration-300 ${
         isDragging
           ? 'border-purple-500 shadow-2xl shadow-purple-500/30 scale-105'
           : 'border-gray-200/60 hover:border-purple-300 hover:shadow-xl shadow-lg'
@@ -84,69 +84,69 @@ export default function SortableSection({
       layout
     >
       {/* Section Header */}
-      <div className="flex items-center gap-4 p-6 border-b border-gray-200/60">
+      <div className="flex items-start sm:items-center gap-3 md:gap-4 p-4 md:p-6 border-b border-gray-200/60">
         {/* Drag Handle */}
         <button
           {...attributes}
           {...listeners}
-          className={`p-3 rounded-2xl transition-all duration-300 cursor-grab active:cursor-grabbing touch-none ${
+          className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all duration-300 cursor-grab active:cursor-grabbing touch-none flex-shrink-0 mt-1 sm:mt-0 ${
             isDragging
               ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
               : 'bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600 hover:shadow-md'
           }`}
         >
-          <GripVertical className="w-5 h-5" />
+          <GripVertical className="w-4 h-4 md:w-5 md:h-5" />
         </button>
 
-        {/* Section Title */}
+        {/* Section Title & Info */}
         <div className="flex-1 min-w-0">
           <input
             type="text"
             value={section.title}
             onChange={(e) => onUpdate(section.id, { title: e.target.value })}
-            className="font-bold text-2xl bg-transparent border-none focus:outline-none focus:ring-0 w-full p-2 text-gray-900 placeholder-gray-400 rounded-xl hover:bg-gray-50/50 focus:bg-purple-50/30 transition-colors"
+            className="font-bold text-xl sm:text-2xl bg-transparent border-none focus:outline-none focus:ring-0 w-full p-1 sm:p-2 text-gray-900 placeholder-gray-400 rounded-lg md:rounded-xl hover:bg-gray-50/50 focus:bg-purple-50/30 transition-colors"
             placeholder="Untitled Section"
           />
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-sm text-gray-500 font-medium">
+          <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2">
+            <span className="text-xs sm:text-sm text-gray-500 font-medium">
               {section.fields?.length || 0} {section.fields?.length === 1 ? 'field' : 'fields'}
             </span>
-            {section.fields?.some(f => f.required) && (
-              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                Contains required fields
-              </span>
-            )}
+            {/* Removed "Contains required fields" tag */}
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
           <button
             onClick={() => setShowConditional(!showConditional)}
-            className={`p-3 rounded-2xl transition-all duration-300 ${
+            className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all duration-300 ${
               showConditional
                 ? 'bg-purple-100 text-purple-700 shadow-md'
                 : 'text-gray-500 hover:bg-purple-50 hover:text-purple-600 hover:shadow-md'
             }`}
             title="Conditional Logic"
           >
-            <SlidersHorizontal className="w-5 h-5" />
+            <SlidersHorizontal className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           
           <button
             onClick={() => setLocalIsExpanded(p => !p)}
-            className="p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-2xl transition-all duration-300"
+            className="p-2 md:p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-xl md:rounded-2xl transition-all duration-300"
             title={localIsExpanded ? "Collapse" : "Expand"}
           >
-            {localIsExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            {localIsExpanded ? (
+              <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+            ) : (
+              <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+            )}
           </button>
           
           <button
             onClick={() => onDelete(section.id)}
-            className="p-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all duration-300"
+            className="p-2 md:p-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl md:rounded-2xl transition-all duration-300"
             title="Delete Section"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function SortableSection({
             }}
             className="overflow-hidden"
           >
-            <div className="p-6 space-y-6">
+            <div className="p-4 md:p-6 space-y-4 md:space-y-6">
               {/* Fields List */}
               <DndContext 
                 sensors={fieldSensors} 
@@ -182,7 +182,7 @@ export default function SortableSection({
               >
                 <SortableContext items={(section.fields || []).map(f => f.id)} strategy={verticalListSortingStrategy}>
                   <motion.div 
-                    className="space-y-4"
+                    className="space-y-3 md:space-y-4"
                     layout
                   >
                     <AnimatePresence>
@@ -209,34 +209,36 @@ export default function SortableSection({
 
               {/* Add Field Panel */}
               <motion.div 
-                className="bg-gradient-to-br from-purple-50/80 to-indigo-50/80 rounded-2xl border-2 border-dashed border-purple-200/60 p-6"
+                className="bg-gradient-to-br from-purple-50/80 to-indigo-50/80 rounded-xl md:rounded-2xl border-2 border-dashed border-purple-200/60 p-4 md:p-6"
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                    <Plus className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <Plus className="w-4 h-4 md:w-5 md:h-5 text-white" />
                   </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-900">Add New Field</h4>
-                    <p className="text-sm text-gray-600">Choose a field type to add to this section</p>
+                  <div className="min-w-0">
+                    <h4 className="text-base md:text-lg font-bold text-gray-900 truncate">Add New Field</h4>
+                    <p className="text-xs md:text-sm text-gray-600 hidden xs:block">
+                      Choose a field type to add to this section
+                    </p>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3">
                   {FIELD_TYPES.map((field) => (
                     <motion.button
                       key={field.type}
                       onClick={() => onAddField(section.id, field.type)}
-                      className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border-2 border-gray-200/60 shadow-sm hover:border-purple-300 hover:shadow-lg hover:bg-purple-50/30 transition-all duration-300 group"
+                      className="flex flex-col items-center gap-2 md:gap-3 p-2 md:p-4 bg-white rounded-xl md:rounded-2xl border-2 border-gray-200/60 shadow-sm hover:border-purple-300 hover:shadow-lg hover:bg-purple-50/30 transition-all duration-300 group min-h-[80px] md:min-h-[100px]"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       title={`Add ${field.label}`}
                     >
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:from-purple-200 group-hover:to-indigo-200 transition-all duration-300">
-                        <field.icon className="w-6 h-6 text-purple-600" />
+                      <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:from-purple-200 group-hover:to-indigo-200 transition-all duration-300 flex-shrink-0">
+                        <field.icon className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
                       </div>
-                      <span className="font-semibold text-sm text-gray-700 text-center leading-tight">
+                      <span className="font-semibold text-xs md:text-sm text-gray-700 text-center leading-tight line-clamp-2">
                         {field.label}
                       </span>
                     </motion.button>
@@ -269,7 +271,7 @@ export default function SortableSection({
 
       {/* Drag Overlay Effect */}
       {isDragging && (
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-2xl md:rounded-3xl pointer-events-none" />
       )}
     </motion.div>
   );

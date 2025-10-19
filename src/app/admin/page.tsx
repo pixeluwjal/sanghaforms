@@ -61,7 +61,7 @@ export default function AdminDashboard() {
           </div>
           
           <Link
-            href="/admin/forms/builder/new"
+            href="/admin/forms/create"
             className="inline-flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Plus className="w-5 h-5" />

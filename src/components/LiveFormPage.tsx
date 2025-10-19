@@ -5,6 +5,13 @@ import { Loader2, CheckCircle, UploadCloud, Send, XCircle, ChevronDown, Users, M
 import toast from 'react-hot-toast';
 
 // --- TYPE DEFINITIONS ---
+interface Theme {
+  primaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  fontFamily: string;
+}
+
 interface Field {
   id: string; type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'sangha' | 'file' | 'whatsapp_optin' | 'arratai_optin' | string;
   label: string; required: boolean; placeholder?: string; options?: string[];
@@ -32,6 +39,7 @@ interface Form {
     title: string; 
     description: string; 
     sections: Section[]; 
+    theme?: Theme;
     images?: { banner?: string; logo?: string; }; 
     settings?: { 
         customSlug?: string, 
@@ -98,13 +106,10 @@ const fetchOrganizationData = async (): Promise<Vibhaaga[]> => {
     }
 };
 
-// ----------------------------------------------------
-
 // Component for Sangha Hierarchy (Interactive Dropdowns)
-// Component for Sangha Hierarchy (Interactive Dropdowns)
-const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldChange: (fieldId: string, value: string) => void }) => {
-    const commonInputClasses = "w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all duration-200";
-
+const SanghaHierarchyField = ({ field, onFieldChange, theme }: { field: Field, onFieldChange: (fieldId: string, value: string) => void, theme?: Theme }) => {
+    const primaryColor = theme?.primaryColor || '#7C3AED';
+    
     const [hierarchyData, setHierarchyData] = useState<Vibhaaga[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -181,9 +186,20 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center p-6 bg-purple-50 rounded-xl border border-purple-200">
-                <Loader2 className="w-5 h-5 animate-spin mr-2 text-purple-600"/>
-                <p className="text-sm text-purple-700">Loading Sangha hierarchy...</p>
+            <div 
+                className="flex items-center justify-center p-6 rounded-xl border transition-all duration-200"
+                style={{
+                    backgroundColor: `${primaryColor}15`,
+                    borderColor: `${primaryColor}30`
+                }}
+            >
+                <Loader2 
+                    className="w-5 h-5 animate-spin mr-2" 
+                    style={{ color: primaryColor }}
+                />
+                <p className="text-sm font-medium" style={{ color: primaryColor }}>
+                    Loading Sangha hierarchy...
+                </p>
             </div>
         );
     }
@@ -208,14 +224,27 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
     }
     
     return (
-        <div className="space-y-4 p-5 bg-purple-50/50 rounded-xl border-2 border-purple-200 shadow-inner">
-            <p className="flex items-center gap-2 text-base font-bold text-purple-800">
-                <Users className="w-5 h-5"/> Sangha Hierarchy: {field.label}
+        <div 
+            className="space-y-4 p-5 rounded-xl border-2 shadow-inner transition-all duration-200"
+            style={{
+                backgroundColor: `${primaryColor}08`,
+                borderColor: `${primaryColor}30`
+            }}
+        >
+            <p 
+                className="flex items-center gap-2 text-base font-bold"
+                style={{ color: primaryColor }}
+            >
+                <Users className="w-5 h-5" /> Sangha Hierarchy: {field.label}
             </p>
 
             {/* Vibhaag Selector */}
             <div className="relative">
-                <label htmlFor={`${field.id}-vibhaag`} className="block text-sm font-medium text-purple-700 mb-2">
+                <label 
+                    htmlFor={`${field.id}-vibhaag`} 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: primaryColor }}
+                >
                     Vibhaag *
                 </label>
                 <select 
@@ -224,7 +253,12 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
                     required={field.required} 
                     value={vibhaagId} 
                     onChange={handleVibhaagChange} 
-                    className={commonInputClasses}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1"
+                    style={{
+                        borderColor: '#CBD5E1',
+                        focusBorderColor: primaryColor,
+                        focusRingColor: `${primaryColor}40`
+                    }}
                 >
                     <option value="">Select Vibhaag</option>
                     {hierarchyData.map(v => (
@@ -236,7 +270,11 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
 
             {/* Khanda Selector */}
             <div className="relative">
-                <label htmlFor={`${field.id}-khanda`} className="block text-sm font-medium text-purple-700 mb-2">
+                <label 
+                    htmlFor={`${field.id}-khanda`} 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: primaryColor }}
+                >
                     Khanda *
                 </label>
                 <select 
@@ -246,7 +284,12 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
                     value={khandaId} 
                     onChange={handleKhandaChange} 
                     disabled={!vibhaagId} 
-                    className={commonInputClasses}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                        borderColor: '#CBD5E1',
+                        focusBorderColor: primaryColor,
+                        focusRingColor: `${primaryColor}40`
+                    }}
                 >
                     <option value="">Select Khanda</option>
                     {availableKhandas.map(k => (
@@ -259,7 +302,11 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
             {/* Valaya Selector (Visible only if applicable) */}
             {selectedKhanda && availableValayas.length > 0 && (
                 <div className="relative">
-                    <label htmlFor={`${field.id}-valaya`} className="block text-sm font-medium text-purple-700 mb-2">
+                    <label 
+                        htmlFor={`${field.id}-valaya`} 
+                        className="block text-sm font-medium mb-2"
+                        style={{ color: primaryColor }}
+                    >
                         Valaya {field.required ? '*' : ''}
                     </label>
                     <select 
@@ -269,7 +316,12 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
                         value={valayaId} 
                         onChange={handleValayaChange} 
                         disabled={!khandaId} 
-                        className={commonInputClasses}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                            borderColor: '#CBD5E1',
+                            focusBorderColor: primaryColor,
+                            focusRingColor: `${primaryColor}40`
+                        }}
                     >
                         <option value="">Select Valaya</option>
                         {availableValayas.map(v => (
@@ -282,7 +334,11 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
 
             {/* Milan Selector */}
             <div className="relative">
-                <label htmlFor={`${field.id}-milan`} className="block text-sm font-medium text-purple-700 mb-2">
+                <label 
+                    htmlFor={`${field.id}-milan`} 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: primaryColor }}
+                >
                     Milan *
                 </label>
                 <select 
@@ -292,7 +348,12 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
                     value={milanName} 
                     onChange={handleMilanChange} 
                     disabled={!khandaId || (availableValayas.length > 0 && !valayaId)} 
-                    className={commonInputClasses}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                        borderColor: '#CBD5E1',
+                        focusBorderColor: primaryColor,
+                        focusRingColor: `${primaryColor}40`
+                    }}
                 >
                     <option value="">Select Milan</option>
                     {availableMilans.map(m => (
@@ -301,20 +362,13 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
                 </select>
                 <ChevronDown className="w-4 h-4 absolute right-3 top-3/4 transform -translate-y-1/2 pointer-events-none text-slate-500" />
             </div>
-
-            {/* Debug info (remove in production) */}
-            {process.env.NODE_ENV === 'development' && (
-                <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
-                    <p><strong>Debug:</strong> Vibhaags: {hierarchyData.length}, Khandas: {availableKhandas.length}, Valayas: {availableValayas.length}, Milans: {availableMilans.length}</p>
-                </div>
-            )}
         </div>
     );
 };
 
 // Form Field Renderer Component
-const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, onFieldChange: (fieldId: string, value: string) => void, isVisible?: boolean }) => {
-    const commonInputClasses = "w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200";
+const FormField = ({ field, onFieldChange, isVisible = true, theme }: { field: Field, onFieldChange: (fieldId: string, value: string) => void, isVisible?: boolean, theme?: Theme }) => {
+    const primaryColor = theme?.primaryColor || '#6366F1';
     const inputId = `field-${field.id}`;
 
     const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -326,17 +380,54 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
     };
 
     const inputElement = (() => {
+        const commonInputStyle = {
+            borderColor: '#CBD5E1',
+            focusBorderColor: primaryColor,
+            focusRingColor: `${primaryColor}40`
+        };
+
         switch (field.type) {
             case 'text': case 'email': case 'number':
-                return <input id={inputId} name={field.id} type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'} required={field.required} placeholder={field.placeholder} className={commonInputClasses} onChange={handleFieldChange} />;
+                return (
+                    <input 
+                        id={inputId} 
+                        name={field.id} 
+                        type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'} 
+                        required={field.required} 
+                        placeholder={field.placeholder} 
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1"
+                        style={commonInputStyle}
+                        onChange={handleFieldChange} 
+                    />
+                );
             case 'textarea':
-                return <textarea id={inputId} name={field.id} required={field.required} placeholder={field.placeholder} rows={4} className={`${commonInputClasses} resize-y`} onChange={handleFieldChange} />;
+                return (
+                    <textarea 
+                        id={inputId} 
+                        name={field.id} 
+                        required={field.required} 
+                        placeholder={field.placeholder} 
+                        rows={4} 
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 resize-y"
+                        style={commonInputStyle}
+                        onChange={handleFieldChange} 
+                    />
+                );
             case 'select':
                 return (
                     <div className="relative">
-                        <select id={inputId} name={field.id} required={field.required} className={`${commonInputClasses} appearance-none pr-8 bg-white cursor-pointer`} onChange={handleFieldChange}>
+                        <select 
+                            id={inputId} 
+                            name={field.id} 
+                            required={field.required} 
+                            className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 appearance-none pr-8 cursor-pointer"
+                            style={commonInputStyle}
+                            onChange={handleFieldChange}
+                        >
                             <option value="">{field.placeholder || `Select ${field.label}`}</option>
-                            {field.options?.map((option, idx) => (<option key={idx} value={option}>{option}</option>))}
+                            {field.options?.map((option, idx) => (
+                                <option key={idx} value={option}>{option}</option>
+                            ))}
                         </select>
                         <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500" />
                     </div>
@@ -346,7 +437,18 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                     <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
                         {field.options?.map((option, idx) => (
                             <label key={idx} className="flex items-center gap-3 text-slate-700 cursor-pointer">
-                                <input type="radio" name={field.id} required={field.required} value={option} className="text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" onChange={handleFieldChange} />
+                                <input 
+                                    type="radio" 
+                                    name={field.id} 
+                                    required={field.required} 
+                                    value={option} 
+                                    className="border-slate-300 w-5 h-5 focus:ring-2 focus:ring-offset-1" 
+                                    style={{
+                                        color: primaryColor,
+                                        focusRingColor: `${primaryColor}40`
+                                    }}
+                                    onChange={handleFieldChange} 
+                                />
                                 <span className="text-base">{option}</span>
                             </label>
                         ))}
@@ -357,22 +459,50 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                     <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
                         {field.options?.map((option, idx) => (
                             <label key={idx} className="flex items-center gap-3 text-slate-700 cursor-pointer">
-                                <input type="checkbox" name={field.id} value={option} className="rounded text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" onChange={(e) => handleCheckboxChange(option, e.target.checked)} />
+                                <input 
+                                    type="checkbox" 
+                                    name={field.id} 
+                                    value={option} 
+                                    className="rounded border-slate-300 w-5 h-5 focus:ring-2 focus:ring-offset-1" 
+                                    style={{
+                                        color: primaryColor,
+                                        focusRingColor: `${primaryColor}40`
+                                    }}
+                                    onChange={(e) => handleCheckboxChange(option, e.target.checked)} 
+                                />
                                 <span className="text-base">{option}</span>
                             </label>
                         ))}
                     </div>
                 );
             case 'date':
-                return <input id={inputId} name={field.id} type="date" required={field.required} className={commonInputClasses} onChange={handleFieldChange} />;
+                return (
+                    <input 
+                        id={inputId} 
+                        name={field.id} 
+                        type="date" 
+                        required={field.required} 
+                        className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1"
+                        style={commonInputStyle}
+                        onChange={handleFieldChange} 
+                    />
+                );
             case 'sangha':
-                return <SanghaHierarchyField field={field} onFieldChange={onFieldChange} />;
+                return <SanghaHierarchyField field={field} onFieldChange={onFieldChange} theme={theme} />;
             case 'file':
-                return <div className="border-2 border-dashed border-indigo-400 rounded-xl p-8 text-center bg-indigo-50/50 hover:border-indigo-600 transition-all cursor-pointer">
-                    <UploadCloud className="w-10 h-10 text-indigo-600 mx-auto mb-3" />
-                    <p className="text-base text-slate-800 font-bold">Click or drag files here</p>
-                    <p className="text-xs text-slate-500 mt-1">Max 10MB per file. Supports: Images, PDF, Docs</p>
-                </div>;
+                return (
+                    <div 
+                        className="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
+                        style={{
+                            borderColor: `${primaryColor}60`,
+                            backgroundColor: `${primaryColor}08`
+                        }}
+                    >
+                        <UploadCloud className="w-10 h-10 mx-auto mb-3" style={{ color: primaryColor }} />
+                        <p className="text-base text-slate-800 font-bold">Click or drag files here</p>
+                        <p className="text-xs text-slate-500 mt-1">Max 10MB per file. Supports: Images, PDF, Docs</p>
+                    </div>
+                );
             case 'whatsapp_optin':
                 return (
                     <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 shadow-inner">
@@ -393,7 +523,7 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                                 required={true}
                                 placeholder="Enter your 10-digit mobile number"
                                 pattern="[0-9]{10}"
-                                className={commonInputClasses}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 focus:border-green-500 focus:ring-green-500/20"
                                 onChange={handleFieldChange}
                             />
                         </div>
@@ -419,7 +549,7 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                                 required={true}
                                 placeholder="Enter your 10-digit mobile number for Arratai"
                                 pattern="[0-9]{10}"
-                                className={commonInputClasses}
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm transition-all duration-200 focus:ring-2 focus:ring-offset-1 focus:border-blue-500 focus:ring-blue-500/20"
                                 onChange={handleFieldChange}
                             />
                         </div>
@@ -435,7 +565,7 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                                     id={`${field.id}-username`}
                                     name={`${field.id}-username`}
                                     placeholder="Choose your Arratai username"
-                                    className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                                     onChange={handleFieldChange}
                                 />
                             </div>
@@ -480,6 +610,17 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     // BOTH ARE MANDATORY - ALWAYS TRUE
     const [isWhatsAppOptedIn, setIsWhatsAppOptedIn] = useState(false);
     const [isArrataiOptedIn, setIsArrataiOptedIn] = useState(false);
+
+    // Get theme with fallbacks
+    const theme = form?.theme || {
+        primaryColor: '#6366F1',
+        backgroundColor: '#F8FAFC',
+        textColor: '#1F2937',
+        fontFamily: 'Inter'
+    };
+
+    const primaryColor = theme.primaryColor;
+    const backgroundColor = theme.backgroundColor;
 
     const evaluateAllSectionVisibility = useCallback((currentValues: Record<string, string>, currentForm: Form | null): Set<string> => {
         if (!currentForm) return new Set();
@@ -535,12 +676,15 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         setIsLoading(true);
         fetchFormBySlug(slug)
             .then(data => {
+                console.log('Fetched form data:', data);
+                console.log('Form theme:', data.theme);
                 setForm({ ...data, _id: data._id });
                 
                 const initialVisibleSections = evaluateAllSectionVisibility({}, data);
                 setVisibleSections(initialVisibleSections);
             })
             .catch((e) => {
+                console.error('Error fetching form:', e);
                 toast.error(e.message || "Failed to load form.");
                 setForm(null);
             })
@@ -563,10 +707,6 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
             }
         }
     }, [formValues, form, evaluateAllSectionVisibility, visibleSections]);
-
-    // BOTH ARE MANDATORY - ALWAYS TRUE
-    const hasWhatsAppField = true; // Always mandatory
-    const hasArrataiField = true; // Always mandatory
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -672,16 +812,27 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                <p className="ml-3 text-lg font-medium text-slate-700">Loading Form...</p>
+            <div 
+                className="min-h-screen flex items-center justify-center transition-all duration-300"
+                style={{ backgroundColor }}
+            >
+                <Loader2 
+                    className="w-10 h-10 animate-spin" 
+                    style={{ color: primaryColor }}
+                />
+                <p className="ml-3 text-lg font-medium" style={{ color: theme.textColor }}>
+                    Loading Form...
+                </p>
             </div>
         );
     }
 
     if (!slug) { 
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <div 
+                className="min-h-screen flex items-center justify-center p-4 transition-all duration-300"
+                style={{ backgroundColor }}
+            >
                 <div className="p-10 bg-white rounded-xl shadow-xl text-center border-4 border-red-400">
                     <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                     <p className="text-xl text-red-700 font-semibold">Error: Form Link is Missing.</p>
@@ -693,7 +844,10 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
     if (!form) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div 
+                className="min-h-screen flex items-center justify-center transition-all duration-300"
+                style={{ backgroundColor }}
+            >
                 <p className="text-xl text-red-600 font-semibold">Form not found or unavailable.</p>
             </div>
         );
@@ -710,18 +864,29 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         };
 
         return (
-            <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
+            <div 
+                className="min-h-screen flex items-center justify-center p-4 transition-all duration-300"
+                style={{ backgroundColor: `${primaryColor}08` }}
+            >
                 <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-10 text-center border-4 border-indigo-400">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Success!</h2>
                     <p className="text-xl text-slate-600">Your response has been successfully submitted.</p>
                     
                     {showLinks && (
-                        <div className="mt-8 p-6 bg-indigo-100 rounded-xl space-y-4">
-                            <p className="text-lg font-bold text-indigo-800 flex items-center justify-center gap-2">
+                        <div 
+                            className="mt-8 p-6 rounded-xl space-y-4 transition-all duration-300"
+                            style={{ backgroundColor: `${primaryColor}15` }}
+                        >
+                            <p 
+                                className="text-lg font-bold flex items-center justify-center gap-2"
+                                style={{ color: primaryColor }}
+                            >
                                 <Smartphone className="w-5 h-5"/> Join Our Community
                             </p>
-                            <p className="text-sm text-indigo-600">You can join our group to stay updated on next activities.</p>
+                            <p style={{ color: primaryColor, opacity: 0.8 }}>
+                                You can join our group to stay updated on next activities.
+                            </p>
                             
                             <div className="flex flex-col sm:flex-row justify-center gap-4">
                                 {whatsappGroupLink && (
@@ -749,9 +914,16 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                     )}
 
                     {!showLinks && (
-                        <div className="mt-6 p-4 bg-indigo-100 rounded-xl">
-                            <p className="text-sm font-semibold text-indigo-800">What happens next?</p>
-                            <p className="text-sm text-indigo-600 mt-1">We will review your submission and contact you shortly regarding the next steps.</p>
+                        <div 
+                            className="mt-6 p-4 rounded-xl transition-all duration-300"
+                            style={{ backgroundColor: `${primaryColor}15` }}
+                        >
+                            <p className="text-sm font-semibold" style={{ color: primaryColor }}>
+                                What happens next?
+                            </p>
+                            <p className="text-sm mt-1" style={{ color: primaryColor, opacity: 0.8 }}>
+                                We will review your submission and contact you shortly regarding the next steps.
+                            </p>
                         </div>
                     )}
                 </div>
@@ -760,11 +932,14 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
+        <div 
+            className="min-h-screen py-10 px-4 sm:px-6 lg:px-8 transition-all duration-300"
+            style={{ backgroundColor }}
+        >
             <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
                 
                 {/* --- Header Card --- */}
-                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 border-t-8 border-indigo-600">
+                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 border-t-8 transition-all duration-300" style={{ borderColor: primaryColor }}>
                     
                     {/* Banner */}
                     <div className="relative h-48 bg-slate-100/70 flex items-center justify-center">
@@ -793,7 +968,11 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                         if (!isSectionVisible) return null;
 
                         return (
-                            <div key={section.id} className="bg-white rounded-2xl shadow-xl p-6 sm:p-10 border-t-4 border-purple-500">
+                            <div 
+                                key={section.id} 
+                                className="bg-white rounded-2xl shadow-xl p-6 sm:p-10 border-t-4 transition-all duration-300"
+                                style={{ borderColor: primaryColor }}
+                            >
                                 <h2 className="text-2xl font-extrabold text-slate-800 mb-2">{section.title}</h2>
                                 <p className="text-md text-slate-500 mb-6 border-b pb-4">{section.description}</p>
                                 
@@ -804,6 +983,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                                             field={field} 
                                             onFieldChange={handleFieldChange}
                                             isVisible={true}
+                                            theme={theme}
                                         />
                                     ))}
                                 </div>
@@ -874,7 +1054,11 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                     <button
                         type="submit"
                         disabled={isSubmitting || !isWhatsAppOptedIn || !isArrataiOptedIn}
-                        className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-800 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                        className="w-full py-4 text-white rounded-lg font-bold text-lg transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
+                        style={{
+                            background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
+                            opacity: (isSubmitting || !isWhatsAppOptedIn || !isArrataiOptedIn) ? 0.5 : 1
+                        }}
                     >
                         {isSubmitting ? (
                             <>
