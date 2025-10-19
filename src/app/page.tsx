@@ -23,13 +23,13 @@ export default function Home() {
             
             <div className="flex items-center gap-4">
               <Link 
-                href="/admin/login" 
+                href="/login" 
                 className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
               >
                 Sign In
               </Link>
               <Link 
-                href="/admin/login" 
+                href="/login" 
                 className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-medium"
               >
                 Get Started
@@ -62,7 +62,7 @@ export default function Home() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Link 
-                href="/admin/login" 
+                href="/login" 
                 className="group bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 font-semibold text-lg flex items-center gap-3 shadow-lg hover:shadow-xl"
               >
                 Start Building Free

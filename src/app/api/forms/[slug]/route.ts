@@ -54,6 +54,7 @@ export async function GET(
         title: section.title,
         description: section.description,
         order: section.order,
+        conditionalRules: section.conditionalRules,
         fields: section.fields.map((field: any) => ({
           id: field.id,
           type: field.type,

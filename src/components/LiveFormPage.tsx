@@ -9,7 +9,24 @@ interface Field {
   id: string; type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'sangha' | 'file' | string;
   label: string; required: boolean; placeholder?: string; options?: string[];
 }
-interface Section { id: string; title: string; description: string; fields: Field[]; }
+
+interface ConditionalRule {
+  id: string;
+  targetSection: string;
+  field: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
+  value: any;
+  action: 'show' | 'hide';
+}
+
+interface Section { 
+  id: string; 
+  title: string; 
+  description: string; 
+  fields: Field[]; 
+  conditionalRules: ConditionalRule[];
+}
+
 interface Form { 
     _id: string; 
     title: string; 
@@ -20,9 +37,9 @@ interface Form {
         customSlug?: string, 
         allowMultipleResponses: boolean, 
         enableProgressSave: boolean,
-        showGroupLinks?: boolean,       // NEW
-        whatsappGroupLink?: string,     // NEW
-        arrataiGroupLink?: string       // NEW
+        showGroupLinks?: boolean,
+        whatsappGroupLink?: string,
+        arrataiGroupLink?: string
     }; 
 }
 
@@ -54,7 +71,7 @@ const fetchOrganizationData = async (): Promise<Vibhaaga[]> => {
 // ----------------------------------------------------
 
 // Component for Sangha Hierarchy (Interactive Dropdowns)
-const SanghaHierarchyField = ({ field }: { field: Field }) => {
+const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldChange: (fieldId: string, value: string) => void }) => {
     const commonInputClasses = "w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all duration-200";
 
     const [hierarchyData, setHierarchyData] = useState<Vibhaaga[]>([]);
@@ -84,10 +101,35 @@ const SanghaHierarchyField = ({ field }: { field: Field }) => {
     const availableMilans = selectedValaya?.milans || (selectedKhanda?.milans && availableValayas.length === 0 ? selectedKhanda.milans : []);
     
     // Handlers (Updating state)
-    const handleVibhaagChange = (e: React.ChangeEvent<HTMLSelectElement>) => { setVibhaagId(e.target.value); setKhandaId(''); setValayaId(''); setMilanName(''); };
-    const handleKhandaChange = (e: React.ChangeEvent<HTMLSelectElement>) => { setKhandaId(e.target.value); setValayaId(''); setMilanName(''); };
-    const handleValayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => { setValayaId(e.target.value); setMilanName(''); };
-    const handleMilanChange = (e: React.ChangeEvent<HTMLSelectElement>) => { setMilanName(e.target.value); };
+    const handleVibhaagChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
+        const value = e.target.value;
+        setVibhaagId(value); 
+        setKhandaId(''); 
+        setValayaId(''); 
+        setMilanName(''); 
+        onFieldChange(`${field.id}-vibhaag`, value);
+    };
+
+    const handleKhandaChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
+        const value = e.target.value;
+        setKhandaId(value); 
+        setValayaId(''); 
+        setMilanName(''); 
+        onFieldChange(`${field.id}-khanda`, value);
+    };
+
+    const handleValayaChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
+        const value = e.target.value;
+        setValayaId(value); 
+        setMilanName(''); 
+        onFieldChange(`${field.id}-valaya`, value);
+    };
+
+    const handleMilanChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
+        const value = e.target.value;
+        setMilanName(value); 
+        onFieldChange(`${field.id}-milan`, value);
+    };
 
     if (isLoading) {
         return (
@@ -146,20 +188,29 @@ const SanghaHierarchyField = ({ field }: { field: Field }) => {
 };
 
 // Form Field Renderer Component
-const FormField = ({ field }: { field: Field }) => {
+const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, onFieldChange: (fieldId: string, value: string) => void, isVisible?: boolean }) => {
     const commonInputClasses = "w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-200";
     const inputId = `field-${field.id}`;
+
+    const handleFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        onFieldChange(field.id, e.target.value);
+    };
+
+    const handleCheckboxChange = (value: string, isChecked: boolean) => {
+        // For checkboxes, you might want to handle multiple values
+        onFieldChange(field.id, value);
+    };
 
     const inputElement = (() => {
         switch (field.type) {
             case 'text': case 'email': case 'number':
-                return <input id={inputId} name={field.id} type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'} required={field.required} placeholder={field.placeholder} className={commonInputClasses} />;
+                return <input id={inputId} name={field.id} type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'} required={field.required} placeholder={field.placeholder} className={commonInputClasses} onChange={handleFieldChange} />;
             case 'textarea':
-                return <textarea id={inputId} name={field.id} required={field.required} placeholder={field.placeholder} rows={4} className={`${commonInputClasses} resize-y`} />;
+                return <textarea id={inputId} name={field.id} required={field.required} placeholder={field.placeholder} rows={4} className={`${commonInputClasses} resize-y`} onChange={handleFieldChange} />;
             case 'select':
                 return (
                     <div className="relative">
-                        <select id={inputId} name={field.id} required={field.required} className={`${commonInputClasses} appearance-none pr-8 bg-white cursor-pointer`}>
+                        <select id={inputId} name={field.id} required={field.required} className={`${commonInputClasses} appearance-none pr-8 bg-white cursor-pointer`} onChange={handleFieldChange}>
                             <option value="">{field.placeholder || `Select ${field.label}`}</option>
                             {field.options?.map((option, idx) => (<option key={idx} value={option}>{option}</option>))}
                         </select>
@@ -171,7 +222,7 @@ const FormField = ({ field }: { field: Field }) => {
                     <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
                         {field.options?.map((option, idx) => (
                             <label key={idx} className="flex items-center gap-3 text-slate-700 cursor-pointer">
-                                <input type="radio" name={field.id} required={field.required} value={option} className="text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" />
+                                <input type="radio" name={field.id} required={field.required} value={option} className="text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" onChange={handleFieldChange} />
                                 <span className="text-base">{option}</span>
                             </label>
                         ))}
@@ -182,16 +233,16 @@ const FormField = ({ field }: { field: Field }) => {
                     <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
                         {field.options?.map((option, idx) => (
                             <label key={idx} className="flex items-center gap-3 text-slate-700 cursor-pointer">
-                                <input type="checkbox" name={field.id} value={option} className="rounded text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" />
+                                <input type="checkbox" name={field.id} value={option} className="rounded text-indigo-600 border-slate-300 w-5 h-5 focus:ring-indigo-500" onChange={(e) => handleCheckboxChange(option, e.target.checked)} />
                                 <span className="text-base">{option}</span>
                             </label>
                         ))}
                     </div>
                 );
             case 'date':
-                return <input id={inputId} name={field.id} type="date" required={field.required} className={commonInputClasses} />;
+                return <input id={inputId} name={field.id} type="date" required={field.required} className={commonInputClasses} onChange={handleFieldChange} />;
             case 'sangha':
-                return <SanghaHierarchyField field={field} />;
+                return <SanghaHierarchyField field={field} onFieldChange={onFieldChange} />;
             case 'file':
                 return <div className="border-2 border-dashed border-indigo-400 rounded-xl p-8 text-center bg-indigo-50/50 hover:border-indigo-600 transition-all cursor-pointer">
                     <UploadCloud className="w-10 h-10 text-indigo-600 mx-auto mb-3" />
@@ -202,6 +253,8 @@ const FormField = ({ field }: { field: Field }) => {
                 return <p className="text-red-500 text-sm p-3 bg-red-50 border border-red-200 rounded-lg">Unsupported field type: {field.type}</p>;
         }
     })();
+
+    if (!isVisible) return null;
 
     return (
         <div className="mb-8 p-4 bg-white rounded-xl shadow-md border border-slate-100">
@@ -216,20 +269,65 @@ const FormField = ({ field }: { field: Field }) => {
 
 // ----------------------------------------------------
 
-
 interface LiveFormPageProps {
-    slug: string; // The form's slug or ID from the URL path
+    slug: string;
 }
 
 export default function LiveFormPage({ slug }: LiveFormPageProps) {
     const [form, setForm] = useState<Form | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [isSubmitting, setIsSubmitting] = useState(false); 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formValues, setFormValues] = useState<Record<string, string>>({});
+    const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
-    // Dynamic Fetching
+    const evaluateAllSectionVisibility = useCallback((currentValues: Record<string, string>, currentForm: Form | null): Set<string> => {
+        if (!currentForm) return new Set();
+
+        const newVisibleSections = new Set<string>();
+
+        currentForm.sections.forEach(section => {
+            if (!section.conditionalRules || section.conditionalRules.length === 0) {
+                newVisibleSections.add(section.id);
+                return;
+            }
+
+            const allRulesMet = section.conditionalRules.every(rule => {
+                const fieldValue = currentValues[rule.field];
+
+                if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
+                    return false;
+                }
+                
+                const fieldValueStr = String(fieldValue).toLowerCase();
+                const ruleValueStr = String(rule.value).toLowerCase();
+
+                switch (rule.operator) {
+                    case 'equals':
+                        return fieldValueStr === ruleValueStr;
+                    case 'not_equals':
+                        return fieldValueStr !== ruleValueStr;
+                    case 'contains':
+                        return fieldValueStr.includes(ruleValueStr);
+                    case 'greater_than':
+                        return Number(fieldValue) > Number(rule.value);
+                    case 'less_than':
+                        return Number(fieldValue) < Number(rule.value);
+                    default:
+                        return false;
+                }
+            });
+            
+            if (allRulesMet) {
+                newVisibleSections.add(section.id);
+            }
+        });
+        
+        return newVisibleSections;
+    }, []);
+
+
     useEffect(() => {
-        // FIX: Ensure slug is a non-empty string before fetching.
         if (typeof slug !== 'string' || slug.length === 0) {
             setIsLoading(false);
             return;
@@ -237,65 +335,118 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
         setIsLoading(true);
         fetchFormBySlug(slug)
-            .then(data => setForm({ ...data, id: data._id })) 
+            .then(data => {
+                setForm({ ...data, _id: data._id });
+                
+                const initialVisibleSections = evaluateAllSectionVisibility({}, data);
+                setVisibleSections(initialVisibleSections);
+            })
             .catch((e) => {
                 toast.error(e.message || "Failed to load form.");
                 setForm(null);
             })
             .finally(() => setIsLoading(false));
-    }, [slug]);
+    }, [slug, evaluateAllSectionVisibility]);
 
 
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmissionStatus('idle');
-    
-    const formData = new FormData(e.target as HTMLFormElement);
-    const responses: { [key: string]: string | string[] | any } = {};
-    
-    // Process form data
-    formData.forEach((value, key) => {
-        responses[key] = value as string;
-    });
-    
-    // Structure responses array for MongoDB submission
-    const formResponsesArray = Object.keys(responses).map(key => ({
-        fieldId: key, 
-        value: responses[key]
-    }));
-    
-    // Final Submission Payload preparation
-    const submissionPayload = {
-        formId: form?._id, 
-        formSlug: form?.settings?.customSlug || form?._id, 
-        responses: formResponsesArray,
-        submittedAt: new Date().toISOString(),
-    };
+    const handleFieldChange = useCallback((fieldId: string, value: string) => {
+        setFormValues(prev => ({ ...prev, [fieldId]: value }));
+    }, []);
 
-    try {
-        // FIX: Use the actual slug from the URL in the API endpoint
-        const response = await fetch(`/api/forms/${slug}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submissionPayload)
+
+    useEffect(() => {
+        if (form) {
+            const updatedVisibleSections = evaluateAllSectionVisibility(formValues, form);
+            
+            const newIds = Array.from(updatedVisibleSections).sort().join(',');
+            const currentIds = Array.from(visibleSections).sort().join(',');
+
+            if (newIds !== currentIds) {
+                setVisibleSections(updatedVisibleSections);
+            }
+        }
+    }, [formValues, form, evaluateAllSectionVisibility, visibleSections]);
+
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setSubmissionStatus('idle');
+
+        const relevantFieldIds = new Set(
+            form?.sections
+                .filter(section => visibleSections.has(section.id))
+                .flatMap(section => section.fields.map(f => f.id)) || []
+        );
+         form?.sections
+            .filter(section => visibleSections.has(section.id))
+            .flatMap(section => section.fields)
+            .filter(field => field.type === 'sangha')
+            .forEach(field => {
+                relevantFieldIds.add(`${field.id}-vibhaag`);
+                relevantFieldIds.add(`${field.id}-khanda`);
+                relevantFieldIds.add(`${field.id}-valaya`);
+                relevantFieldIds.add(`${field.id}-milan`);
+            });
+
+
+        const formResponsesArray = Object.keys(formValues)
+            .filter(key => relevantFieldIds.has(key))
+            .map(key => ({
+                fieldId: key, 
+                value: formValues[key]
+            }));
+
+        const requiredFields = new Set<string>();
+        form?.sections.forEach(section => {
+            if (visibleSections.has(section.id)) {
+                section.fields.forEach(field => {
+                    if (field.required) {
+                        if (field.type === 'sangha') {
+                            requiredFields.add(`${field.id}-milan`); 
+                        } else {
+                            requiredFields.add(field.id);
+                        }
+                    }
+                });
+            }
         });
 
-        const data = await response.json();
+        const missingFields = Array.from(requiredFields).filter(fieldId => !formValues[fieldId] || String(formValues[fieldId]).trim() === '');
 
-        if (!response.ok) {
-            throw new Error(data.error || "Submission failed due to a server error.");
+        if (missingFields.length > 0) {
+            toast.error(`Please fill all required fields. Missing: ${missingFields.join(', ')}`);
+            setIsSubmitting(false);
+            return;
         }
 
-        setSubmissionStatus('success');
-        toast.success("Response recorded successfully! Thank you.");
+        const submissionPayload = {
+            formId: form?._id, 
+            responses: formResponsesArray,
+        };
+        
+        try {
+            const response = await fetch(`/api/forms/${slug}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submissionPayload)
+            });
 
-    } catch (error: any) {
-        setSubmissionStatus('error');
-        toast.error(error.message || "Submission failed. Please check required fields.");
-        setIsSubmitting(false);
-    }
-};
+            if (!response.ok) {
+                 const data = await response.json();
+                 throw new Error(data.error || "Submission failed.");
+            }
+            
+            setSubmissionStatus('success');
+            toast.success("Response recorded successfully!");
+
+        } catch (error: any) {
+            setSubmissionStatus('error');
+            toast.error(error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -307,7 +458,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     if (!slug) { 
-         return (
+        return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="p-10 bg-white rounded-xl shadow-xl text-center border-4 border-red-400">
                     <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -326,71 +477,65 @@ const handleSubmit = async (e: React.FormEvent) => {
         );
     }
 
-if (submissionStatus === 'success') {
-    const { showGroupLinks, whatsappGroupLink, arrataiGroupLink } = form?.settings || {};
-    const showLinks = showGroupLinks && (whatsappGroupLink || arrataiGroupLink);
+    if (submissionStatus === 'success') {
+        const { showGroupLinks, whatsappGroupLink, arrataiGroupLink } = form?.settings || {};
+        const showLinks = showGroupLinks && (whatsappGroupLink || arrataiGroupLink);
 
-    // Function to convert domain to full URL
-    const getFullUrl = (domain: string) => {
-        if (!domain) return '';
-        // If it already starts with http, return as is
-        if (domain.startsWith('http')) return domain;
-        // Otherwise, add https://
-        return `https://${domain}`;
-    };
+        const getFullUrl = (domain: string) => {
+            if (!domain) return '';
+            if (domain.startsWith('http')) return domain;
+            return `https://${domain}`;
+        };
 
-    return (
-        <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
-            <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-10 text-center border-4 border-indigo-400">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Success!</h2>
-                <p className="text-xl text-slate-600">Your response has been successfully submitted.</p>
-                
-                {/* --- Group Links Section --- */}
-                {showLinks && (
-                    <div className="mt-8 p-6 bg-indigo-100 rounded-xl space-y-4">
-                        <p className="text-lg font-bold text-indigo-800 flex items-center justify-center gap-2">
-                            <Smartphone className="w-5 h-5"/> Join Our Community
-                        </p>
-                        <p className="text-sm text-indigo-600">You can join our group to stay updated on next activities.</p>
-                        
-                        <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            {whatsappGroupLink && (
-                                <a 
-                                    href={getFullUrl(whatsappGroupLink)} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full font-semibold hover:bg-green-600 transition-all duration-200 shadow-md"
-                                >
-                                    <MessageSquare className="w-5 h-5"/> WhatsApp Group
-                                </a>
-                            )}
-                            {arrataiGroupLink && (
-                                <a 
-                                    href={getFullUrl(arrataiGroupLink)} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-600 transition-all duration-200 shadow-md"
-                                >
-                                    <Users className="w-5 h-5"/> Arratai Group
-                                </a>
-                            )}
+        return (
+            <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
+                <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-10 text-center border-4 border-indigo-400">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Success!</h2>
+                    <p className="text-xl text-slate-600">Your response has been successfully submitted.</p>
+                    
+                    {showLinks && (
+                        <div className="mt-8 p-6 bg-indigo-100 rounded-xl space-y-4">
+                            <p className="text-lg font-bold text-indigo-800 flex items-center justify-center gap-2">
+                                <Smartphone className="w-5 h-5"/> Join Our Community
+                            </p>
+                            <p className="text-sm text-indigo-600">You can join our group to stay updated on next activities.</p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-center gap-4">
+                                {whatsappGroupLink && (
+                                    <a 
+                                        href={getFullUrl(whatsappGroupLink)} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full font-semibold hover:bg-green-600 transition-all duration-200 shadow-md"
+                                    >
+                                        <MessageSquare className="w-5 h-5"/> WhatsApp Group
+                                    </a>
+                                )}
+                                {arrataiGroupLink && (
+                                    <a 
+                                        href={getFullUrl(arrataiGroupLink)} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-600 transition-all duration-200 shadow-md"
+                                    >
+                                        <Users className="w-5 h-5"/> Arratai Group
+                                    </a>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
-                {/* --- End Group Links Section --- */}
+                    )}
 
-                {!showLinks && (
-                    <div className="mt-6 p-4 bg-indigo-100 rounded-xl">
-                        <p className="text-sm font-semibold text-indigo-800">What happens next?</p>
-                        <p className="text-sm text-indigo-600 mt-1">We will review your submission and contact you shortly regarding the next steps.</p>
-                    </div>
-                )}
+                    {!showLinks && (
+                        <div className="mt-6 p-4 bg-indigo-100 rounded-xl">
+                            <p className="text-sm font-semibold text-indigo-800">What happens next?</p>
+                            <p className="text-sm text-indigo-600 mt-1">We will review your submission and contact you shortly regarding the next steps.</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-    );
-}
-
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -420,18 +565,29 @@ if (submissionStatus === 'success') {
 
                 {/* --- Form Sections --- */}
                 <div className="space-y-10">
-                    {form.sections.map((section, sectionIndex) => (
-                        <div key={section.id} className="bg-white rounded-2xl shadow-xl p-6 sm:p-10 border-t-4 border-purple-500">
-                            <h2 className="text-2xl font-extrabold text-slate-800 mb-2">{section.title}</h2>
-                            <p className="text-md text-slate-500 mb-6 border-b pb-4">{section.description}</p>
-                            
-                            <div className="space-y-4">
-                                {section.fields.map((field) => (
-                                    <FormField key={field.id} field={field} />
-                                ))}
+                    {form.sections.map((section) => {
+                        const isSectionVisible = visibleSections.has(section.id);
+                        
+                        if (!isSectionVisible) return null;
+
+                        return (
+                            <div key={section.id} className="bg-white rounded-2xl shadow-xl p-6 sm:p-10 border-t-4 border-purple-500">
+                                <h2 className="text-2xl font-extrabold text-slate-800 mb-2">{section.title}</h2>
+                                <p className="text-md text-slate-500 mb-6 border-b pb-4">{section.description}</p>
+                                
+                                <div className="space-y-4">
+                                    {section.fields.map((field) => (
+                                        <FormField 
+                                            key={field.id} 
+                                            field={field} 
+                                            onFieldChange={handleFieldChange}
+                                            isVisible={true}
+                                        />
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* --- Submission Bar --- */}
