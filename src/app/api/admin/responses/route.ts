@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
-import FormResponse from '@/models/FormResponse'; // Import from correct model
+import FormResponse from '@/models/FormResponse';
 import Form from '@/models/Form';
 
 export async function GET(request: NextRequest) {
@@ -28,20 +28,29 @@ export async function GET(request: NextRequest) {
     console.log(`📋 Admin has ${adminForms.length} forms`);
     console.log(`📋 Form IDs:`, adminFormIds);
 
-    // Get responses only for admin's forms
+    // Get responses only for admin's forms - FIXED: Don't populate, just get the formId as string
     const responses = await FormResponse.find({
       formId: { $in: adminFormIds }
     })
-    .populate('formId', 'title') // Populate form title
     .sort({ submittedAt: -1 })
     .limit(1000)
     .lean();
 
     console.log(`📦 Found ${responses.length} responses`);
 
+    // Transform responses to include form title and ensure formId is string
+    const transformedResponses = responses.map(response => {
+      const form = adminForms.find(f => f._id.toString() === response.formId.toString());
+      return {
+        ...response,
+        formTitle: form?.title || 'Unknown Form',
+        formId: response.formId.toString() // Ensure formId is string
+      };
+    });
+
     return NextResponse.json({ 
       success: true,
-      responses,
+      responses: transformedResponses,
       forms: adminForms
     });
 

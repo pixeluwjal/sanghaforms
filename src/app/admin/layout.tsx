@@ -13,7 +13,8 @@ import {
   X,
   User,
   Eye,
-  FilePlus
+  FilePlus,
+  MessageSquare
 } from 'lucide-react';
 
 // --- Navigation Items ---
@@ -25,7 +26,7 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-    { name: 'Account Settings', href: '/admin/settings', icon: Settings }
+  { name: 'Account Settings', href: '/admin/forms/create', icon: Settings }
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -48,29 +49,52 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    <div className="flex h-screen bg-gradient-to-br from-purple-50/50 to-indigo-100/50 font-sans">
       
       {/* --- Mobile Sidebar Overlay --- */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden animate-fade-in"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
 
       {/* --- Sidebar --- */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 border-r border-gray-200 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      <div className={`fixed inset-y-0 left-0 z-40 w-80 bg-white/90 backdrop-blur-xl shadow-2xl transform transition-all duration-500 ease-out lg:translate-x-0 lg:static lg:inset-0 border-r border-purple-200/30 ${
+        sidebarOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           
           {/* Logo and Branding */}
-          <div className="flex items-center h-20 px-6 border-b border-gray-200">
-            <Link href="/admin" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <FileText className="w-6 h-6 text-white" />
+          <div className="flex items-center h-24 px-6 border-b border-purple-200/30 bg-gradient-to-r from-white to-purple-50/50">
+            <Link 
+              href="/admin" 
+              className="flex items-center gap-3 group flex-1"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-all duration-300 shadow-purple-500/25">
+                <MessageSquare className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-slate-800">Formify</span>
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  FormBuilder
+                </span>
+                <span className="text-xs text-gray-500 font-medium">Admin Portal</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Create Form Button - Moved to Sidebar */}
+          <div className="p-4 border-b border-purple-200/30 bg-white/50">
+            <Link
+              href="/admin/forms/create"
+              className="flex items-center gap-3 w-full px-4 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-[1.02] active:scale-95 group"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <FilePlus className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-sm">Create New Form</span>
             </Link>
           </div>
 
@@ -84,50 +108,65 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-4 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                    className={`flex items-center gap-4 px-4 py-3.5 text-sm font-semibold rounded-2xl transition-all duration-300 group ${
                       isActive
-                        ? 'bg-indigo-50 text-indigo-600'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-purple-500/10 to-indigo-500/10 text-purple-700 border border-purple-200/50 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-md border border-transparent hover:border-purple-200/30'
                     }`}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-600 group-hover:bg-purple-100 group-hover:text-purple-600'
+                    }`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium">{item.name}</span>
                   </Link>
                 );
               })}
             </nav>
 
             {/* Bottom Section: User Profile & Logout */}
-            <div className="p-4 border-t border-gray-200">
-                {/* Secondary Nav */}
-                 <nav className="mb-4 space-y-2">
-                      {secondaryNavigation.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = pathname === item.href;
-                         return (
-                            <Link key={item.name} href={item.href} className={`flex items-center gap-4 px-4 py-3 text-sm font-semibold rounded-lg transition-all duration-200 ${isActive ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`} onClick={() => setSidebarOpen(false)}>
-                               <Icon className="w-5 h-5" />
-                               <span>{item.name}</span>
-                            </Link>
-                         );
-                      })}
-                 </nav>
+            <div className="p-4 border-t border-purple-200/30 bg-white/50">
+              {/* Secondary Nav */}
+              <nav className="mb-4 space-y-2">
+                {secondaryNavigation.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link 
+                      key={item.name} 
+                      href={item.href} 
+                      className={`flex items-center gap-4 px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-purple-50 text-purple-700 border border-purple-200' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`} 
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
 
-                {/* User Info */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center ring-2 ring-gray-200">
-                  <User className="w-5 h-5 text-gray-500" />
+              {/* User Info */}
+              <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-purple-200/30 shadow-sm">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center border border-purple-200/50">
+                  <User className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
                     Admin User
                   </p>
-                  <p className="text-xs text-gray-500">Administrator</p>
+                  <p className="text-xs text-gray-500 font-medium">Administrator</p>
                 </div>
                 <Link
                   href="/login"
-                  className="p-2 text-gray-500 hover:text-red-500 transition-colors rounded-full hover:bg-gray-100"
+                  className="w-10 h-10 bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500 transition-all duration-300 rounded-xl flex items-center justify-center border border-gray-200 hover:border-red-200"
                   title="Logout"
                 >
                   <LogOut className="w-5 h-5" />
@@ -139,32 +178,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* --- Main Content --- */}
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between h-20 px-6 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
-          >
-            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-          
-          <div className="flex-1" />
-          
-          {/* ✨ Attractive "Create Form" Button */}
-          <Link
-            href="/admin/forms/builder/new"
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform active:scale-95"
-          >
-            <FilePlus className="w-5 h-5" />
-            Create New Form
-          </Link>
-        </header>
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Menu Button - Only visible on mobile */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-2xl text-gray-600 hover:bg-purple-50 hover:text-purple-600 transition-all duration-300 border border-transparent hover:border-purple-200 bg-white/80 backdrop-blur-xl shadow-lg"
+        >
+          {sidebarOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-transparent">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
+
+      {/* Add custom styles for animations */}
+      <style jsx global>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out forwards;
+        }
+        
+        /* Custom scrollbar */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: #c4b5fd;
+          border-radius: 10px;
+        }
+        
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: #a78bfa;
+        }
+      `}</style>
     </div>
   );
 }
-

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, CheckCircle, UploadCloud, Send, XCircle, ChevronDown, Users, MessageSquare, Link, Smartphone } from 'lucide-react';
+import { Loader2, CheckCircle, UploadCloud, Send, XCircle, ChevronDown, Users, MessageSquare, Link, Smartphone, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // --- TYPE DEFINITIONS ---
 interface Field {
-  id: string; type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'sangha' | 'file' | string;
+  id: string; type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'sangha' | 'file' | 'whatsapp_optin' | 'arratai_optin' | string;
   label: string; required: boolean; placeholder?: string; options?: string[];
 }
 
@@ -61,21 +61,53 @@ const fetchFormBySlug = async (slug: string): Promise<Form> => {
     return data;
 };
 
+// FIXED: Proper organization data fetching
 const fetchOrganizationData = async (): Promise<Vibhaaga[]> => {
-    const response = await fetch('/api/organization');
-    if (!response.ok) throw new Error('Failed to fetch organization data.');
-    const data = await response.json();
-    return data.organizations || []; 
+    try {
+        console.log('Fetching organization data from /api/organization...');
+        const response = await fetch('/api/organization');
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Organization API error:', response.status, errorText);
+            throw new Error(`Failed to fetch organization data: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Organization API response:', data);
+        
+        // Handle different response structures
+        if (data.organizations && Array.isArray(data.organizations)) {
+            console.log('Found organizations array with', data.organizations.length, 'items');
+            return data.organizations;
+        } else if (data.success && data.organizations) {
+            console.log('Found success response with organizations:', data.organizations.length);
+            return data.organizations;
+        } else if (Array.isArray(data)) {
+            console.log('Direct array response with', data.length, 'items');
+            return data;
+        } else {
+            console.warn('Unexpected organization data structure:', data);
+            toast.error('Unexpected data format from organization API');
+            return [];
+        }
+    } catch (error) {
+        console.error('Organization fetch error:', error);
+        toast.error('Failed to load Sangha hierarchy data');
+        return [];
+    }
 };
 
 // ----------------------------------------------------
 
+// Component for Sangha Hierarchy (Interactive Dropdowns)
 // Component for Sangha Hierarchy (Interactive Dropdowns)
 const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldChange: (fieldId: string, value: string) => void }) => {
     const commonInputClasses = "w-full px-4 py-3 border border-slate-300 rounded-lg bg-white text-base shadow-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all duration-200";
 
     const [hierarchyData, setHierarchyData] = useState<Vibhaaga[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // State for user selections
     const [vibhaagId, setVibhaagId] = useState('');
@@ -84,11 +116,25 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
     const [milanName, setMilanName] = useState('');
 
     useEffect(() => {
-        setIsLoading(true);
-        fetchOrganizationData()
-            .then(data => setHierarchyData(data))
-            .catch(() => toast.error("Failed to load Sangha hierarchy."))
-            .finally(() => setIsLoading(false));
+        const loadOrganizationData = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const data = await fetchOrganizationData();
+                setHierarchyData(data);
+                
+                if (data.length === 0) {
+                    setError('No organization data found');
+                }
+            } catch (err) {
+                setError('Failed to load organization data');
+                console.error('Error loading organization data:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadOrganizationData();
     }, []);
 
     // Derived states
@@ -98,7 +144,9 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
     const availableValayas = selectedKhanda?.valays || [];
     const selectedValaya = availableValayas.find(v => v._id === valayaId);
     
-    const availableMilans = selectedValaya?.milans || (selectedKhanda?.milans && availableValayas.length === 0 ? selectedKhanda.milans : []);
+    // Get milans - either from valaya or directly from khanda
+    const availableMilans = selectedValaya?.milans || 
+                           (selectedKhanda?.milans && availableValayas.length === 0 ? selectedKhanda.milans : []);
     
     // Handlers (Updating state)
     const handleVibhaagChange = (e: React.ChangeEvent<HTMLSelectElement>) => { 
@@ -135,7 +183,26 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
         return (
             <div className="flex items-center justify-center p-6 bg-purple-50 rounded-xl border border-purple-200">
                 <Loader2 className="w-5 h-5 animate-spin mr-2 text-purple-600"/>
-                <p className="text-sm text-purple-700">Loading hierarchy data...</p>
+                <p className="text-sm text-purple-700">Loading Sangha hierarchy...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-red-700 text-sm font-medium">{error}</p>
+                <p className="text-red-600 text-xs mt-1">
+                    Please refresh the page or contact support if the issue persists.
+                </p>
+            </div>
+        );
+    }
+
+    if (hierarchyData.length === 0) {
+        return (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <p className="text-yellow-700 text-sm">No Sangha data available</p>
             </div>
         );
     }
@@ -148,41 +215,99 @@ const SanghaHierarchyField = ({ field, onFieldChange }: { field: Field, onFieldC
 
             {/* Vibhaag Selector */}
             <div className="relative">
-                <select id={`${field.id}-vibhaag`} name={`${field.id}-vibhaag`} required={field.required} value={vibhaagId} onChange={handleVibhaagChange} className={commonInputClasses}>
+                <label htmlFor={`${field.id}-vibhaag`} className="block text-sm font-medium text-purple-700 mb-2">
+                    Vibhaag *
+                </label>
+                <select 
+                    id={`${field.id}-vibhaag`} 
+                    name={`${field.id}-vibhaag`} 
+                    required={field.required} 
+                    value={vibhaagId} 
+                    onChange={handleVibhaagChange} 
+                    className={commonInputClasses}
+                >
                     <option value="">Select Vibhaag</option>
-                    {hierarchyData.map(v => (<option key={v._id} value={v._id}>{v.name}</option>))}
+                    {hierarchyData.map(v => (
+                        <option key={v._id} value={v._id}>{v.name}</option>
+                    ))}
                 </select>
-                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500" />
+                <ChevronDown className="w-4 h-4 absolute right-3 top-3/4 transform -translate-y-1/2 pointer-events-none text-slate-500" />
             </div>
 
             {/* Khanda Selector */}
             <div className="relative">
-                <select id={`${field.id}-khanda`} name={`${field.id}-khanda`} required={field.required} value={khandaId} onChange={handleKhandaChange} disabled={!vibhaagId} className={commonInputClasses}>
+                <label htmlFor={`${field.id}-khanda`} className="block text-sm font-medium text-purple-700 mb-2">
+                    Khanda *
+                </label>
+                <select 
+                    id={`${field.id}-khanda`} 
+                    name={`${field.id}-khanda`} 
+                    required={field.required} 
+                    value={khandaId} 
+                    onChange={handleKhandaChange} 
+                    disabled={!vibhaagId} 
+                    className={commonInputClasses}
+                >
                     <option value="">Select Khanda</option>
-                    {availableKhandas.map(k => (<option key={k._id} value={k._id}>{k.name}</option>))}
+                    {availableKhandas.map(k => (
+                        <option key={k._id} value={k._id}>{k.name} ({k.code})</option>
+                    ))}
                 </select>
-                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500" />
+                <ChevronDown className="w-4 h-4 absolute right-3 top-3/4 transform -translate-y-1/2 pointer-events-none text-slate-500" />
             </div>
             
             {/* Valaya Selector (Visible only if applicable) */}
             {selectedKhanda && availableValayas.length > 0 && (
                 <div className="relative">
-                    <select id={`${field.id}-valaya`} name={`${field.id}-valaya`} required={field.required} value={valayaId} onChange={handleValayaChange} disabled={!khandaId} className={commonInputClasses}>
+                    <label htmlFor={`${field.id}-valaya`} className="block text-sm font-medium text-purple-700 mb-2">
+                        Valaya {field.required ? '*' : ''}
+                    </label>
+                    <select 
+                        id={`${field.id}-valaya`} 
+                        name={`${field.id}-valaya`} 
+                        required={field.required} 
+                        value={valayaId} 
+                        onChange={handleValayaChange} 
+                        disabled={!khandaId} 
+                        className={commonInputClasses}
+                    >
                         <option value="">Select Valaya</option>
-                        {availableValayas.map(v => (<option key={v._id} value={v._id}>{v.name}</option>))}
+                        {availableValayas.map(v => (
+                            <option key={v._id} value={v._id}>{v.name}</option>
+                        ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500" />
+                    <ChevronDown className="w-4 h-4 absolute right-3 top-3/4 transform -translate-y-1/2 pointer-events-none text-slate-500" />
                 </div>
             )}
 
             {/* Milan Selector */}
             <div className="relative">
-                <select id={`${field.id}-milan`} name={`${field.id}-milan`} required={field.required} value={milanName} onChange={handleMilanChange} disabled={!khandaId || (availableValayas.length > 0 && !valayaId)} className={commonInputClasses}>
+                <label htmlFor={`${field.id}-milan`} className="block text-sm font-medium text-purple-700 mb-2">
+                    Milan *
+                </label>
+                <select 
+                    id={`${field.id}-milan`} 
+                    name={`${field.id}-milan`} 
+                    required={field.required} 
+                    value={milanName} 
+                    onChange={handleMilanChange} 
+                    disabled={!khandaId || (availableValayas.length > 0 && !valayaId)} 
+                    className={commonInputClasses}
+                >
                     <option value="">Select Milan</option>
-                    {availableMilans.map(m => (<option key={m} value={m}>{m}</option>))}
+                    {availableMilans.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                    ))}
                 </select>
-                <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-slate-500" />
+                <ChevronDown className="w-4 h-4 absolute right-3 top-3/4 transform -translate-y-1/2 pointer-events-none text-slate-500" />
             </div>
+
+            {/* Debug info (remove in production) */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                    <p><strong>Debug:</strong> Vibhaags: {hierarchyData.length}, Khandas: {availableKhandas.length}, Valayas: {availableValayas.length}, Milans: {availableMilans.length}</p>
+                </div>
+            )}
         </div>
     );
 };
@@ -197,7 +322,6 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
     };
 
     const handleCheckboxChange = (value: string, isChecked: boolean) => {
-        // For checkboxes, you might want to handle multiple values
         onFieldChange(field.id, value);
     };
 
@@ -249,6 +373,78 @@ const FormField = ({ field, onFieldChange, isVisible = true }: { field: Field, o
                     <p className="text-base text-slate-800 font-bold">Click or drag files here</p>
                     <p className="text-xs text-slate-500 mt-1">Max 10MB per file. Supports: Images, PDF, Docs</p>
                 </div>;
+            case 'whatsapp_optin':
+                return (
+                    <div className="space-y-4 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 shadow-inner">
+                        <p className="flex items-center gap-3 text-lg font-bold text-green-800">
+                            <MessageCircle className="w-5 h-5" /> 
+                            WhatsApp Updates
+                        </p>
+                        
+                        {/* Mobile Number Field */}
+                        <div>
+                            <label className="block text-sm font-medium text-green-700 mb-2">
+                                Mobile Number *
+                            </label>
+                            <input 
+                                type="tel"
+                                id={`${field.id}-mobile`}
+                                name={`${field.id}-mobile`}
+                                required={true}
+                                placeholder="Enter your 10-digit mobile number"
+                                pattern="[0-9]{10}"
+                                className={commonInputClasses}
+                                onChange={handleFieldChange}
+                            />
+                        </div>
+                    </div>
+                );
+            case 'arratai_optin':
+                return (
+                    <div className="space-y-4 p-6 bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl border-2 border-blue-200 shadow-inner">
+                        <p className="flex items-center gap-3 text-lg font-bold text-blue-800">
+                            <Users className="w-5 h-5" /> 
+                            Arratai Platform
+                        </p>
+                        
+                        {/* Mobile Number Field */}
+                        <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-2">
+                                Mobile Number for Arratai *
+                            </label>
+                            <input 
+                                type="tel"
+                                id={`${field.id}-mobile`}
+                                name={`${field.id}-mobile`}
+                                required={true}
+                                placeholder="Enter your 10-digit mobile number for Arratai"
+                                pattern="[0-9]{10}"
+                                className={commonInputClasses}
+                                onChange={handleFieldChange}
+                            />
+                        </div>
+                        
+                        {/* Additional Arratai Information */}
+                        <div className="space-y-3 p-4 bg-white/60 rounded-xl border border-blue-100">
+                            <div>
+                                <label className="block text-xs font-medium text-blue-600 mb-1">
+                                    Arratai Username (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    id={`${field.id}-username`}
+                                    name={`${field.id}-username`}
+                                    placeholder="Choose your Arratai username"
+                                    className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                    onChange={handleFieldChange}
+                                />
+                            </div>
+                            <p className="text-xs text-blue-600">
+                                By joining Arratai, you'll get access to exclusive discussions, events, and networking opportunities.
+                            </p>
+                        </div>
+                    </div>
+                );
             default:
                 return <p className="text-red-500 text-sm p-3 bg-red-50 border border-red-200 rounded-lg">Unsupported field type: {field.type}</p>;
         }
@@ -280,6 +476,10 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formValues, setFormValues] = useState<Record<string, string>>({});
     const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+    
+    // BOTH ARE MANDATORY - ALWAYS TRUE
+    const [isWhatsAppOptedIn, setIsWhatsAppOptedIn] = useState(false);
+    const [isArrataiOptedIn, setIsArrataiOptedIn] = useState(false);
 
     const evaluateAllSectionVisibility = useCallback((currentValues: Record<string, string>, currentForm: Form | null): Set<string> => {
         if (!currentForm) return new Set();
@@ -326,7 +526,6 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         return newVisibleSections;
     }, []);
 
-
     useEffect(() => {
         if (typeof slug !== 'string' || slug.length === 0) {
             setIsLoading(false);
@@ -348,11 +547,9 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
             .finally(() => setIsLoading(false));
     }, [slug, evaluateAllSectionVisibility]);
 
-
     const handleFieldChange = useCallback((fieldId: string, value: string) => {
         setFormValues(prev => ({ ...prev, [fieldId]: value }));
     }, []);
-
 
     useEffect(() => {
         if (form) {
@@ -367,11 +564,27 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         }
     }, [formValues, form, evaluateAllSectionVisibility, visibleSections]);
 
+    // BOTH ARE MANDATORY - ALWAYS TRUE
+    const hasWhatsAppField = true; // Always mandatory
+    const hasArrataiField = true; // Always mandatory
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setSubmissionStatus('idle');
+
+        // BOTH ARE MANDATORY - Check both consents
+        if (!isWhatsAppOptedIn) {
+            toast.error("Please agree to WhatsApp communications to continue.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        if (!isArrataiOptedIn) {
+            toast.error("Please agree to join Arratai platform to continue.");
+            setIsSubmitting(false);
+            return;
+        }
 
         const relevantFieldIds = new Set(
             form?.sections
@@ -389,13 +602,22 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                 relevantFieldIds.add(`${field.id}-milan`);
             });
 
-
         const formResponsesArray = Object.keys(formValues)
             .filter(key => relevantFieldIds.has(key))
             .map(key => ({
                 fieldId: key, 
                 value: formValues[key]
             }));
+
+        // Add MANDATORY opt-in responses
+        formResponsesArray.push({
+            fieldId: 'whatsapp_optin_consent',
+            value: isWhatsAppOptedIn ? 'agreed' : 'not_agreed'
+        });
+        formResponsesArray.push({
+            fieldId: 'arratai_optin_consent', 
+            value: isArrataiOptedIn ? 'agreed' : 'not_agreed'
+        });
 
         const requiredFields = new Set<string>();
         form?.sections.forEach(section => {
@@ -415,7 +637,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         const missingFields = Array.from(requiredFields).filter(fieldId => !formValues[fieldId] || String(formValues[fieldId]).trim() === '');
 
         if (missingFields.length > 0) {
-            toast.error(`Please fill all required fields. Missing: ${missingFields.join(', ')}`);
+            toast.error(`Please fill all required fields.`);
             setIsSubmitting(false);
             return;
         }
@@ -590,16 +812,78 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                     })}
                 </div>
 
+                {/* --- MANDATORY OPT-IN CONSENT SECTION --- */}
+                <div className="mt-8 space-y-6">
+                    {/* WhatsApp Opt-in - MANDATORY */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 shadow-lg p-8">
+                        <div className="flex items-start gap-4">
+                            <input
+                                type="checkbox"
+                                id="whatsapp-optin-consent"
+                                name="whatsapp-optin-consent"
+                                required={true}
+                                checked={isWhatsAppOptedIn}
+                                onChange={(e) => setIsWhatsAppOptedIn(e.target.checked)}
+                                className="mt-1 w-6 h-6 text-green-600 border-green-300 rounded focus:ring-green-500 flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                                <label htmlFor="whatsapp-optin-consent" className="block text-xl font-bold text-green-800 mb-2 flex items-center gap-3">
+                                    <MessageCircle className="w-6 h-6" />
+                                    WhatsApp Communication Consent (Required)
+                                </label>
+                                <p className="text-green-700 text-lg mb-3">
+                                    I opt-in to receive communication about Yuva initiatives via WhatsApp group.
+                                </p>
+                                <p className="text-green-600 text-sm font-semibold">
+                                    This is mandatory for all registrations.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Arratai Opt-in - MANDATORY */}
+                    <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl border-2 border-blue-200 shadow-lg p-8">
+                        <div className="flex items-start gap-4">
+                            <input
+                                type="checkbox"
+                                id="arratai-optin-consent"
+                                name="arratai-optin-consent"
+                                required={true}
+                                checked={isArrataiOptedIn}
+                                onChange={(e) => setIsArrataiOptedIn(e.target.checked)}
+                                className="mt-1 w-6 h-6 text-blue-600 border-blue-300 rounded focus:ring-blue-500 flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                                <label htmlFor="arratai-optin-consent" className="block text-xl font-bold text-blue-800 mb-2 flex items-center gap-3">
+                                    <Users className="w-6 h-6" />
+                                    Arratai Platform Consent (Required)
+                                </label>
+                                <p className="text-blue-700 text-lg mb-3">
+                                    I would like to join the Arratai platform to connect with like-minded individuals and participate in Yuva initiatives.
+                                </p>
+                                <p className="text-blue-600 text-sm font-semibold">
+                                    This is mandatory for all registrations.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* --- Submission Bar --- */}
                 <div className="mt-12 p-6 bg-white rounded-xl shadow-2xl border border-slate-200/80 sticky bottom-0 z-10">
                     <button
                         type="submit"
-                        disabled={isSubmitting}
-                        className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-800 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-wait"
+                        disabled={isSubmitting || !isWhatsAppOptedIn || !isArrataiOptedIn}
+                        className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-800 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
                     >
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
+                            </>
+                        ) : !isWhatsAppOptedIn || !isArrataiOptedIn ? (
+                            <>
+                                <XCircle className="w-5 h-5" />
+                                Agree to All Required Consents
                             </>
                         ) : (
                             <>
@@ -607,7 +891,15 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                             </>
                         )}
                     </button>
-                    {submissionStatus === 'error' && (
+                    
+                    {/* Show message when disabled due to opt-in */}
+                    {(!isWhatsAppOptedIn || !isArrataiOptedIn) ? (
+                        <div className="mt-4 text-center">
+                            <p className="text-red-600 font-semibold text-sm">
+                                Both WhatsApp and Arratai consents are required to submit this form
+                            </p>
+                        </div>
+                    ) : submissionStatus === 'error' && (
                         <div className="mt-4 flex items-center justify-center gap-2 text-red-600 font-semibold text-sm">
                             <XCircle className="w-4 h-4" /> Please correct the errors above and try again.
                         </div>

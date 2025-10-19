@@ -4,10 +4,20 @@ import { randomBytes } from 'crypto';
 import dbConnect from '@/lib/mongodb';
 import Admin from '@/models/Admin';
 import { sendInvitationEmail } from '@/lib/email';
+import { verifyToken } from '@/lib/auth'; // Import your token verification
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
+    
+    // Get and verify the token from cookies
+    const token = request.cookies.get('token')?.value;
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const decoded = await verifyToken(token); // Verify the token
     
     const { email, role } = await request.json();
 
@@ -29,9 +39,13 @@ export async function POST(request: NextRequest) {
         existingAdmin.invitationToken = invitationToken;
         existingAdmin.invitationExpires = invitationExpires;
         existingAdmin.role = role;
+        existingAdmin.createdBy = decoded.adminId; // Track who resent the invitation
         await existingAdmin.save();
 
-        const invitationLink = `${process.env.NEXTAUTH_URL}/admin/setup-account?token=${invitationToken}`;
+        // Use the request's origin for the URL
+        const origin = request.nextUrl.origin;
+        const invitationLink = `${origin}/setup-account?token=${invitationToken}`;
+        
         await sendInvitationEmail(email, invitationLink, role);
 
         return NextResponse.json({ 
@@ -52,12 +66,15 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       invitationToken,
       invitationExpires,
+      createdBy: decoded.adminId // Use the verified admin ID
     });
 
     await admin.save();
 
-    // Send invitation email
-    const invitationLink = `${process.env.NEXTAUTH_URL}/admin/setup-account?token=${invitationToken}`;
+    // Use the request's origin for the URL
+    const origin = request.nextUrl.origin;
+    const invitationLink = `${origin}/setup-account?token=${invitationToken}`;
+    
     await sendInvitationEmail(email, invitationLink, role);
 
     return NextResponse.json({ 

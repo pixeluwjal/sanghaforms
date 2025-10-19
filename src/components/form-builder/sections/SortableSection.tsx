@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  GripVertical, ChevronDown, ChevronUp, Trash2, SlidersHorizontal,
+  GripVertical, ChevronDown, ChevronUp, Trash2, SlidersHorizontal, Plus,
 } from "lucide-react";
 import {
   DndContext,
@@ -48,21 +48,17 @@ export default function SortableSection({
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: section.id });
 
-  // ✨ THE FIX: If any section is dragging, this card is NOT expanded.
   const isExpanded = isDraggingSection ? false : localIsExpanded;
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || "transform 200ms ease, box-shadow 300ms ease",
-    opacity: isDragging ? 0.95 : 1,
-    boxShadow: isDragging
-      ? "0 25px 50px -12px rgba(0, 0, 0, 0.3)"
-      : "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)",
+    transition: transition || "transform 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease",
+    opacity: isDragging ? 0.8 : 1,
     zIndex: isDragging ? 100 : 10,
   };
 
   const fieldSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const handleFieldDragEnd = (event: DragEndEvent) => {
@@ -76,33 +72,86 @@ export default function SortableSection({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white rounded-xl border border-slate-200/80 transition-shadow">
-      <div className="flex items-center gap-2 p-3 border-b border-slate-200">
-        <button {...attributes} {...listeners} className="p-2 text-slate-400 cursor-grab active:cursor-grabbing rounded-lg hover:bg-slate-100 transition-colors touch-none">
-          <GripVertical className="w-6 h-6" />
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      className={`group relative bg-white/90 backdrop-blur-sm rounded-3xl border-2 transition-all duration-300 ${
+        isDragging
+          ? 'border-purple-500 shadow-2xl shadow-purple-500/30 scale-105'
+          : 'border-gray-200/60 hover:border-purple-300 hover:shadow-xl shadow-lg'
+      }`}
+      whileHover={{ scale: isDragging ? 1.05 : 1.02 }}
+      layout
+    >
+      {/* Section Header */}
+      <div className="flex items-center gap-4 p-6 border-b border-gray-200/60">
+        {/* Drag Handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className={`p-3 rounded-2xl transition-all duration-300 cursor-grab active:cursor-grabbing touch-none ${
+            isDragging
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
+              : 'bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600 hover:shadow-md'
+          }`}
+        >
+          <GripVertical className="w-5 h-5" />
         </button>
+
+        {/* Section Title */}
         <div className="flex-1 min-w-0">
           <input
             type="text"
             value={section.title}
             onChange={(e) => onUpdate(section.id, { title: e.target.value })}
-            className="font-bold text-xl bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-indigo-300 rounded w-full p-1 text-slate-800"
+            className="font-bold text-2xl bg-transparent border-none focus:outline-none focus:ring-0 w-full p-2 text-gray-900 placeholder-gray-400 rounded-xl hover:bg-gray-50/50 focus:bg-purple-50/30 transition-colors"
             placeholder="Untitled Section"
           />
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-sm text-gray-500 font-medium">
+              {section.fields?.length || 0} {section.fields?.length === 1 ? 'field' : 'fields'}
+            </span>
+            {section.fields?.some(f => f.required) && (
+              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                Contains required fields
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setShowConditional(!showConditional)} className={`p-2 rounded-lg transition-all ${showConditional ? 'bg-purple-100 text-purple-700' : 'text-slate-500 hover:bg-slate-100'}`} title="Conditional Logic">
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowConditional(!showConditional)}
+            className={`p-3 rounded-2xl transition-all duration-300 ${
+              showConditional
+                ? 'bg-purple-100 text-purple-700 shadow-md'
+                : 'text-gray-500 hover:bg-purple-50 hover:text-purple-600 hover:shadow-md'
+            }`}
+            title="Conditional Logic"
+          >
             <SlidersHorizontal className="w-5 h-5" />
           </button>
-          <button onClick={() => setLocalIsExpanded(p => !p)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg" title={localIsExpanded ? "Collapse" : "Expand"}>
+          
+          <button
+            onClick={() => setLocalIsExpanded(p => !p)}
+            className="p-3 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-2xl transition-all duration-300"
+            title={localIsExpanded ? "Collapse" : "Expand"}
+          >
             {localIsExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
           </button>
-          <button onClick={() => onDelete(section.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg" title="Delete Section">
+          
+          <button
+            onClick={() => onDelete(section.id)}
+            className="p-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all duration-300"
+            title="Delete Section"
+          >
             <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
-      
+
+      {/* Expandable Content */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -111,56 +160,117 @@ export default function SortableSection({
             animate="open"
             exit="collapsed"
             variants={{
-              open: { opacity: 1, height: "auto" },
-              collapsed: { opacity: 0, height: 0 }
+              open: { 
+                opacity: 1, 
+                height: "auto",
+                transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
+              },
+              collapsed: { 
+                opacity: 0, 
+                height: 0,
+                transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }
+              }
             }}
-            transition={{ duration: 0.4, ease: [0.04, 0.62, 0.23, 0.98] }}
             className="overflow-hidden"
           >
-            <div className="p-4 space-y-4">
-              <DndContext sensors={fieldSensors} collisionDetection={closestCenter} onDragEnd={handleFieldDragEnd}>
+            <div className="p-6 space-y-6">
+              {/* Fields List */}
+              <DndContext 
+                sensors={fieldSensors} 
+                collisionDetection={closestCenter} 
+                onDragEnd={handleFieldDragEnd}
+              >
                 <SortableContext items={(section.fields || []).map(f => f.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-3">
-                    {(section.fields || []).map((field) => (
-                      <SortableFieldItem
-                        key={field.id}
-                        field={field}
-                        onUpdate={(updates) => onUpdateField(section.id, field.id, updates)}
-                        onDelete={() => onDeleteField(section.id, field.id)}
-                      />
-                    ))}
-                  </div>
+                  <motion.div 
+                    className="space-y-4"
+                    layout
+                  >
+                    <AnimatePresence>
+                      {(section.fields || []).map((field, index) => (
+                        <motion.div
+                          key={field.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -100 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          layout
+                        >
+                          <SortableFieldItem
+                            field={field}
+                            onUpdate={(updates) => onUpdateField(section.id, field.id, updates)}
+                            onDelete={() => onDeleteField(section.id, field.id)}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
                 </SortableContext>
               </DndContext>
 
-              <div className="p-3 bg-slate-50/70 rounded-lg border border-slate-200">
-                <h4 className="text-sm font-bold text-slate-600 mb-2">ADD FIELD</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {/* Add Field Panel */}
+              <motion.div 
+                className="bg-gradient-to-br from-purple-50/80 to-indigo-50/80 rounded-2xl border-2 border-dashed border-purple-200/60 p-6"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Plus className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900">Add New Field</h4>
+                    <p className="text-sm text-gray-600">Choose a field type to add to this section</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {FIELD_TYPES.map((field) => (
-                    <button
+                    <motion.button
                       key={field.type}
                       onClick={() => onAddField(section.id, field.type)}
-                      className="flex items-center gap-2 p-2 border border-slate-200 rounded-md bg-white shadow-sm hover:bg-indigo-50 hover:border-indigo-300 transition-all text-left"
+                      className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border-2 border-gray-200/60 shadow-sm hover:border-purple-300 hover:shadow-lg hover:bg-purple-50/30 transition-all duration-300 group"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       title={`Add ${field.label}`}
                     >
-                      <field.icon className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                      <span className="font-semibold text-sm text-slate-700">{field.label}</span>
-                    </button>
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:from-purple-200 group-hover:to-indigo-200 transition-all duration-300">
+                        <field.icon className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <span className="font-semibold text-sm text-gray-700 text-center leading-tight">
+                        {field.label}
+                      </span>
+                    </motion.button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
 
+              {/* Conditional Rules */}
               <AnimatePresence>
                 {showConditional && (
-                   <motion.div initial={{ opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}}>
-                     <ConditionalRules section={section} sections={sections} onUpdate={(updates) => onUpdate(section.id, updates)} />
-                   </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <ConditionalRules 
+                      section={section} 
+                      sections={sections} 
+                      onUpdate={(updates) => onUpdate(section.id, updates)} 
+                    />
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Drag Overlay Effect */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-3xl pointer-events-none" />
+      )}
+    </motion.div>
   );
 }

@@ -34,9 +34,19 @@ export interface Field {
 }
 
 export type FieldType = 
-  | 'text' | 'email' | 'number' | 'textarea' | 'select' 
-  | 'radio' | 'checkbox' | 'date' | 'sangha' | 'file';
-
+  | 'text' 
+  | 'email' 
+  | 'number' 
+  | 'textarea' 
+  | 'select' 
+  | 'radio' 
+  | 'checkbox' 
+  | 'date' 
+  | 'sangha' 
+  | 'file' 
+  | 'whatsapp_optin'  // ADD THIS
+  | 'arratai_optin';  // ADD THIS
+  
 export interface ConditionalRule {
   id: string;
   targetSection: string;

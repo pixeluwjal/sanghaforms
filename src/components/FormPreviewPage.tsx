@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle, UploadCloud, Send, XCircle, ChevronDown, Users } from 'lucide-react';
+import { Loader2, XCircle, ChevronDown, Users, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // --- TYPE DEFINITIONS ---
@@ -82,27 +82,6 @@ const fetchOrganizationData = async (): Promise<Vibhaaga[]> => {
   if (!response.ok) throw new Error('Failed to fetch organization data.');
   const data = await response.json();
   return data.organizations || [];
-};
-
-const submitFormData = async (formId: string, data: any): Promise<{ success: boolean; message: string }> => {
-  const response = await fetch('/api/submissions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      formId,
-      submissionData: data,
-      submittedAt: new Date().toISOString(),
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Submission failed');
-  }
-
-  return await response.json();
 };
 
 // Component for Sangha Hierarchy (Interactive Dropdowns)
@@ -389,8 +368,6 @@ const FormField = ({ field }: { field: Field }) => {
 export default function FormPreviewPage({ formId }: { formId: string }) {
   const [form, setForm] = useState<Form | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Dynamic Fetching
   useEffect(() => {
@@ -410,45 +387,6 @@ export default function FormPreviewPage({ formId }: { formId: string }) {
       })
       .finally(() => setIsLoading(false));
   }, [formId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmissionStatus('idle');
-    
-    try {
-      const formData = new FormData(e.target as HTMLFormElement);
-      const data: { [key: string]: FormDataEntryValue | FormDataEntryValue[] } = {};
-      
-      // Convert FormData to plain object
-      formData.forEach((value, key) => {
-        if (data[key]) {
-          // If key already exists, convert to array
-          if (Array.isArray(data[key])) {
-            (data[key] as FormDataEntryValue[]).push(value);
-          } else {
-            data[key] = [data[key] as FormDataEntryValue, value];
-          }
-        } else {
-          data[key] = value;
-        }
-      });
-
-      // Submit to actual API
-      const result = await submitFormData(formId, data);
-      
-      if (result.success) {
-        setSubmissionStatus('success');
-        toast.success("Form submitted successfully! Thank you.");
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      setSubmissionStatus('error');
-      toast.error(error instanceof Error ? error.message : "Submission failed. Please try again.");
-      setIsSubmitting(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -471,25 +409,9 @@ export default function FormPreviewPage({ formId }: { formId: string }) {
     );
   }
 
-  if (submissionStatus === 'success') {
-    return (
-      <div className="min-h-screen bg-indigo-50 flex items-center justify-center p-4">
-        <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl p-10 text-center border-4 border-indigo-400">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-3xl font-extrabold text-slate-800 mb-2">Success!</h2>
-          <p className="text-xl text-slate-600">Your registration has been successfully submitted.</p>
-          <div className="mt-6 p-4 bg-indigo-100 rounded-xl">
-            <p className="text-sm font-semibold text-indigo-800">What happens next?</p>
-            <p className="text-sm text-indigo-600 mt-1">We will review your submission and contact you shortly regarding the next steps.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         
         {/* Header Card */}
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-8 border-t-8 border-indigo-600">
@@ -546,31 +468,7 @@ export default function FormPreviewPage({ formId }: { formId: string }) {
             </div>
           ))}
         </div>
-
-        {/* Submission Bar */}
-        <div className="mt-12 p-6 bg-white rounded-xl shadow-2xl border border-slate-200/80 sticky bottom-0 z-10">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg font-bold text-lg hover:from-indigo-700 hover:to-purple-800 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-wait"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" /> Submitting...
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" /> Submit Registration
-              </>
-            )}
-          </button>
-          {submissionStatus === 'error' && (
-            <div className="mt-4 flex items-center justify-center gap-2 text-red-600 font-semibold text-sm">
-              <XCircle className="w-4 h-4" /> Please correct the errors above and try again.
-            </div>
-          )}
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

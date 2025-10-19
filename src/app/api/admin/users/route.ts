@@ -15,14 +15,22 @@ export async function GET(request: NextRequest) {
 
     const decoded = await verifyToken(token);
     
-    // Only super admins can view all admins
-    if (decoded.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    let admins;
+    
+    // Super admins can view all admins
+    if (decoded.role === 'super_admin') {
+      admins = await Admin.find()
+        .select('-password -invitationToken')
+        .populate('createdBy', 'email role')
+        .sort({ createdAt: -1 });
+    } 
+    // Regular admins can only view admins they created
+    else {
+      admins = await Admin.find({ createdBy: decoded.adminId })
+        .select('-password -invitationToken')
+        .populate('createdBy', 'email role')
+        .sort({ createdAt: -1 });
     }
-
-    const admins = await Admin.find()
-      .select('-password -invitationToken')
-      .sort({ createdAt: -1 });
 
     return NextResponse.json({ admins });
 

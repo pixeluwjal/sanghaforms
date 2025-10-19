@@ -32,6 +32,11 @@ const AdminSchema = new mongoose.Schema({
   invitationExpires: {
     type: Date,
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -45,5 +50,6 @@ const AdminSchema = new mongoose.Schema({
 // Add index for better performance
 AdminSchema.index({ invitationToken: 1 });
 AdminSchema.index({ email: 1 });
+AdminSchema.index({ createdBy: 1 }); // Add index for createdBy
 
 export default mongoose.models.Admin || mongoose.model('Admin', AdminSchema);

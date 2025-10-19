@@ -9,444 +9,328 @@ export async function GET(request: NextRequest) {
     const organizations = await Organization.find();
 
     if (organizations.length === 0) {
-      // Seed initial data if empty
+      // Seed data based on Excel structure - FIXED: milans as strings
       const initialData = [
         {
           _id: "vibhaaga_001",
-          name: "Dakshina Vibhaaga",
+          name: "Bengaluru Dakshin",
           khandas: [
             {
               _id: "khanda_vjn",
-              name: "Vijayanagar Khanda",
+              name: "Vijayanagara",
               code: "VJN",
               valays: [
                 {
                   _id: "valay_vjn_1",
-                  name: "VijayaNagar Valay",
-                  milans: [
-                    "Vijayanagara Milan",
-                    "Hampinagara Milan",
-                    "Attiguppe Milan",
-                  ],
+                  name: "Visheshwariah Nagara",
+                  milans: ["Bharatnagara", "Annapurneshwarinagara"]
                 },
                 {
                   _id: "valay_vjn_2",
-                  name: "GovindarajaNagar Valay",
-                  milans: [
-                    "Saraswatinagara Milan",
-                    "MC Layout Milan",
-                    "Kalyananagara Milan",
-                  ],
+                  name: "Nagarabhavi",
+                  milans: ["Nagarabhavi", "Jnanabharati", "Chandra Layout"]
                 },
                 {
                   _id: "valay_vjn_3",
-                  name: "Nagarabhavi Valay",
-                  milans: [
-                    "Chandra Layout Milan",
-                    "Nagarabhavi Milan",
-                    "Jnanabharati Milan",
-                  ],
+                  name: "Govindarajanagara",
+                  milans: ["Kalyananagara", "MC Layout", "Saraswatinagara"]
                 },
                 {
                   _id: "valay_vjn_4",
-                  name: "Kengeri Valay",
-                  milans: [
-                    "Bandematha Milan",
-                    "Doddabele Milan",
-                    "Kumbalagodu Milan",
-                  ],
+                  name: "Kengeri",
+                  milans: ["Doddabele", "Kumbalagodu", "Bandematha"]
                 },
                 {
                   _id: "valay_vjn_5",
-                  name: "Vishweshwaraiah Valay",
-                  milans: ["Annapurneshwarinagara Milan", "Bharatnagara Milan"],
-                },
-              ],
+                  name: "Vijayanagara",
+                  milans: ["Vijayanagara", "Hampinagara", "Attiguppe"]
+                }
+              ]
             },
             {
               _id: "khanda_skpm",
-              name: "Sri Krishna Puram Khanda",
+              name: "Shankarapuram",
               code: "SKPM",
-              valays: [],
-              milans: [
-                "Basavangudi Milan",
-                "HanumanthaNagar Milan",
-                "Girinagar Milan",
-                "Chennamanaker Achukattu Milan",
-                "Banashankari Milan",
-              ],
+              valays: [
+                {
+                  _id: "valay_skpm_1",
+                  name: "Shankarapuram",
+                  milans: ["Banashankari", "Chennamanakere Achukattu", "Girinagar", "Basavanagudi", "Hanumanthanagar"]
+                }
+              ]
             },
             {
               _id: "khanda_bsk",
-              name: "Shankarpuram Khanda",
+              name: "Banashankari",
               code: "BSK",
               valays: [
                 {
                   _id: "valay_bsk_1",
-                  name: "Srinivasapura Valaya",
-                  milans: [
-                    "Kodipalya IT Karya Milan",
-                    "Krishna Garden IT Karya Milan",
-                    "Srinivaspura IT Karya Milan",
-                    "Vijayashree Layout IT Karya Milan",
-                  ],
+                  name: "Srinivasapura",
+                  milans: ["Srinivasapura", "Vijayashree Layout", "Hemmigepura", "Kodipalya", "Krishna Garden"]
                 },
                 {
                   _id: "valay_bsk_2",
-                  name: "Banashankari Valaya",
-                  milans: [
-                    "Kathriguppe IT Karya Milan",
-                    "Kumaraswamy Layout Milan",
-                    "Chikkalsandra IT Karya Milan",
-                    "Yelachenahalli IT Karya Milan",
-                  ],
+                  name: "Rajarajeshwari Nagara",
+                  milans: ["Rajarajeshwari", "Sacchidananda Nagar", "Kenchanahalli", "Poornapragna"]
                 },
                 {
                   _id: "valay_bsk_3",
-                  name: "Rajarajeshwari Nagara Valaya",
-                  milans: [
-                    "Kenchanahalli IT Karya Milan",
-                    "Poornapragna IT Karya Milan",
-                    "Rajarajeshwari IT Karya Milan",
-                    "Sacchidananda Nagar IT Karya Milan",
-                  ],
+                  name: "Vasantapura",
+                  milans: ["Gubbalala", "Reshme Nagar", "Gokulam", "Pavamanapura", "Turahalli", "Vasanta Vallabha Nagara"]
                 },
                 {
                   _id: "valay_bsk_4",
-                  name: "Vasantapura Valaya",
-                  milans: [
-                    "Turahalli Milan",
-                    "Vasanta Vallabha Nagara Milan",
-                    "Gokulam Milan",
-                    "Reshme Nagar Milan",
-                    "Gubblala Milan",
-                    "Pavamanapura Milan",
-                  ],
-                },
-              ],
+                  name: "Banashankari",
+                  milans: ["Chikkalasandra", "Yelachenahalli", "Kathriguppe", "Kumaraswamy Layout"]
+                }
+              ]
             },
             {
               _id: "khanda_btm",
-              name: "BTM Khanda",
+              name: "BTM",
               code: "BTM",
               valays: [
                 {
                   _id: "valay_btm_1",
-                  name: "Jayanagar Valay",
-                  milans: [
-                    "Jayanagar Milan",
-                    "Yediyur Milan",
-                    "Ragigudda Milan",
-                    "JP Nagar Phase 1 Milan",
-                  ],
+                  name: "Jayanagara",
+                  milans: ["Ragigudda", "JP Nagar Phase 1", "Jayanagar", "Yediyur"]
                 },
                 {
                   _id: "valay_btm_2",
-                  name: "BTM Valay",
-                  milans: [
-                    "BTM Milan",
-                    "Shri Ram Milan",
-                    "SG Palya Milan",
-                    "Maruti Nagar Milan",
-                  ],
+                  name: "BTM",
+                  milans: ["SG Palya", "Maruti Nagar", "BTM", "Shri Ram"]
                 },
                 {
                   _id: "valay_btm_3",
-                  name: "Koramangala Valay",
-                  milans: [
-                    "Venkatapura Milan",
-                    "ST Bed Milan",
-                    "Kormangala Milan",
-                  ],
-                },
-              ],
+                  name: "Koramangala",
+                  milans: ["Koramangala", "Venkatapura", "ST Bed"]
+                }
+              ]
             },
             {
               _id: "khanda_ark",
-              name: "Arakere Khanda",
+              name: "Arakere",
               code: "ARK",
               valays: [
                 {
                   _id: "valay_ark_1",
-                  name: "Puttenahalli Valay",
-                  milans: [
-                    "Arekere Milan",
-                    "Puttenahalli Milan",
-                    "Jambusavari Dinne",
-                  ],
+                  name: "Gottigere",
+                  milans: ["Akshay Nagar", "Tejaswini Nagar", "Gottigere"]
                 },
                 {
                   _id: "valay_ark_2",
-                  name: "JP Nagar Valay",
-                  milans: [
-                    "Satyaganapathi Milan",
-                    "Chinmaya Milan",
-                    "Narayana e-Techno Milan",
-                  ],
+                  name: "Billekahalli",
+                  milans: ["Hulimavu", "Royal Shelters", "Bilekahalli", "Kodichikanahalli"]
                 },
                 {
                   _id: "valay_ark_3",
-                  name: "Gottigere Valay",
-                  milans: [
-                    "Tejaswini Nagar Milan",
-                    "Gottiger Milan",
-                    "Akshay Nagar Milan",
-                  ],
+                  name: "JP Nagara",
+                  milans: ["Narayana e-Techno", "Satyaganapathi", "Chinmaya"]
                 },
                 {
                   _id: "valay_ark_4",
-                  name: "Bilekahalli Valay",
-                  milans: [
-                    "Bilekahalli Milan",
-                    "Kodichikanahalli Milan",
-                    "Hulimavu Milan",
-                    "Royal Shelters Milan",
-                  ],
+                  name: "Narayana Nagara",
+                  milans: ["HVR", "Narayan Nagar", "LBS"]
                 },
                 {
                   _id: "valay_ark_5",
-                  name: "Narayan Nagar Valay",
-                  milans: ["Narayan Nagar Milan", "LBS Milan", "HVR Milan"],
-                },
-              ],
+                  name: "Puttenahalli",
+                  milans: ["Jambusavari Dinne", "Arekere", "Puttenahalli"]
+                }
+              ]
             },
             {
               _id: "khanda_chn",
-              name: "Chandapura Khanda",
+              name: "Chandapura",
               code: "CHN",
               valays: [
                 {
                   _id: "valay_chn_1",
-                  name: "EC1 Valay",
-                  milans: [
-                    "EC1 Milan",
-                    "Neeladri Nagar Milan",
-                    "Doddathuguru Milan",
-                    "Basapura Milan",
-                    "MuthurayaSwamy Milan",
-                    "Madhav Yuva Milan",
-                  ],
+                  name: "EC1",
+                  milans: ["Basapura", "Neeladri Nagar", "Doddathuguru", "MuthurayaSwamy", "EC1", "Madhav yuva", "Chikkathogur"]
                 },
                 {
                   _id: "valay_chn_2",
-                  name: "EC2 Valay",
-                  milans: ["EC2 Milan", "Anantnagar Milan", "Shantipura Milan"],
+                  name: "EC2",
+                  milans: ["Shantipura", "EC2", "Anantnagar"]
                 },
                 {
                   _id: "valay_chn_3",
-                  name: "Chandapura Valay",
-                  milans: [
-                    "Chandapura Milan",
-                    "Atteebele Milan",
-                    "VBHC Apartment Milan",
-                  ],
+                  name: "Chandapura",
+                  milans: ["Atteebele", "VBHC Apartment", "Chandapura"]
                 },
                 {
                   _id: "valay_chn_4",
-                  name: "Bommasandra Valay",
-                  milans: [
-                    "Neo Town Milan",
-                    "DLF Woodland Hights Apartment Milan",
-                    "DLF Maiden Hights Apartment Milan",
-                  ],
+                  name: "Bommasandra",
+                  milans: ["DLF Maiden Heights Apartment", "Neo Town", "DLF Woodland Heights Apartment"]
                 },
                 {
                   _id: "valay_chn_5",
-                  name: "Bommanahalli Valay",
-                  milans: [
-                    "Begur Milan",
-                    "Bommanahalli Milan",
-                    "Roopena Agarahara Milan",
-                    "Singasandra Milan",
-                  ],
-                },
-              ],
+                  name: "Bommanahalli",
+                  milans: ["Singasandra", "Roopena Agrahara", "Begur", "Bommanahalli"]
+                }
+              ]
             },
             {
               _id: "khanda_vrt",
-              name: "Varthur Khanda",
+              name: "Varthur",
               code: "VRT",
               valays: [
                 {
                   _id: "valay_vrt_1",
-                  name: "Panathur Valay",
-                  milans: [
-                    "Kadubeesanahalli Milan",
-                    "Doddakanneli Milan",
-                    "Carmelaram Milan",
-                    "Temple Milan",
-                    "GGL Layout Milan",
-                  ],
+                  name: "Gunjur",
+                  milans: ["Balegere", "Shobha Dream Acres", "Eco Life", "Gunjur", "Laharia Apartment"]
                 },
                 {
                   _id: "valay_vrt_2",
-                  name: "Gunjur Valay",
-                  milans: [
-                    "Balegere Milan",
-                    "Gunjur Milan",
-                    "Eco life Milan",
-                    "Shobha dream acres Milan",
-                  ],
+                  name: "HSR",
+                  milans: ["ITI Layout", "Yuva", "HSR Sector 6", "HSR Sector 2", "Agara"]
                 },
                 {
                   _id: "valay_vrt_3",
-                  name: "Dommasandara Valay",
-                  milans: [
-                    "Dommasandra Milan",
-                    "Sarjapura Milan",
-                    "Trinity Complex Milan",
-                  ],
+                  name: "Hosa Road",
+                  milans: ["Hosa Road", "Kudlu", "Nagnathpura"]
                 },
                 {
                   _id: "valay_vrt_4",
-                  name: "Kaikondarahalli Valay",
-                  milans: [
-                    "KKH Lake Milan",
-                    "Kasvanahalli Milan",
-                    "Haralur Milan",
-                  ],
+                  name: "Kaikondarahalli",
+                  milans: ["KKH Lake", "Kasvanahalli", "Haralur"]
                 },
                 {
                   _id: "valay_vrt_5",
-                  name: "HSR Valay",
-                  milans: [
-                    "HSR Sec2 Milan",
-                    "Agara Milan",
-                    "HSR Sector 6 New Milan",
-                    "ITI Layout Milan",
-                    "Yuva Milan",
-                  ],
+                  name: "Dommasandra",
+                  milans: ["Dommasandra", "Sarjapura", "Trinity Complex"]
                 },
                 {
                   _id: "valay_vrt_6",
-                  name: "Hosa Road Valay",
-                  milans: [
-                    "Hosa Road Milan",
-                    "Kudlu Milan",
-                    "Nagnathpura Milan",
-                  ],
-                },
-              ],
+                  name: "Panathur",
+                  milans: ["Kadubeesanahalli", "Doddakanneli", "Carmelaram", "Temple", "GGL Layout"]
+                }
+              ]
             },
             {
               _id: "khanda_kgp",
-              name: "Kaggadaspura Khanda",
+              name: "Kaggadasapura",
               code: "KGP",
               valays: [
                 {
                   _id: "valay_kgp_1",
-                  name: "Kaggadaspura Valay",
-                  milans: [
-                    "Kaggadaspura Milan",
-                    "Byrasandra Milan",
-                    "Malleshpalya Milan",
-                    "Vignannagar Milan",
-                  ],
+                  name: "Kaggadaspura",
+                  milans: ["Kaggadaspura", "Byrasandra", "Malleshpalya", "Vignannagar"]
                 },
                 {
                   _id: "valay_kgp_2",
-                  name: "Kundalahalli Valay",
-                  milans: [
-                    "AECS Layout Milan",
-                    "Chinnapanahalli Milan",
-                    "BEML Layout Milan",
-                  ],
+                  name: "Kundalahalli",
+                  milans: ["AECS Layout", "Chinnapanahalli", "BEML Layout"]
                 },
                 {
                   _id: "valay_kgp_3",
-                  name: "LBS Nagar Valay",
-                  milans: [
-                    "LBS Nagar Milan",
-                    "Basava Nagar Milan",
-                    "GM palya Milan",
-                    "Yemalur Milan",
-                  ],
+                  name: "LBS Nagar",
+                  milans: ["LBS Nagar", "Basava Nagar", "GM palya", "Yemalur"]
                 },
                 {
                   _id: "valay_kgp_4",
-                  name: "Pai Layout Valay",
-                  milans: [
-                    "B Narayanpura Milan",
-                    "Karthik Nagar Milan",
-                    "Pai Layout Milan",
-                  ],
+                  name: "Pai Layout",
+                  milans: ["B Narayanpura", "Karthik Nagar", "Pai Layout"]
                 },
                 {
                   _id: "valay_kgp_5",
-                  name: "Munnekolalu Valay",
-                  milans: [
-                    "Vagdevi vilas Milan",
-                    "Sai Baba Milan",
-                    "Marathahalli Milan",
-                  ],
-                },
-              ],
+                  name: "Munnekolalu",
+                  milans: ["Vagdevi vilas", "Sai Baba", "Marathahalli"]
+                }
+              ]
             },
             {
               _id: "khanda_whf",
-              name: "Whitefield Khanda",
+              name: "Whitefield",
               code: "WHF",
               valays: [
                 {
                   _id: "valay_whf_1",
-                  name: "Whitefield Valay",
-                  milans: [
-                    "Whitefield Milan",
-                    "Nellurhalli Milan",
-                    "ITPL Milan",
-                  ],
+                  name: "Whitefield",
+                  milans: ["Whitefield", "Nellurhalli", "ITPL"]
                 },
                 {
                   _id: "valay_whf_2",
-                  name: "Hoodi Valay",
-                  milans: [
-                    "Mahadevpura Milan",
-                    "Hoodi Milan",
-                    "Seetharampalya Milan",
-                  ],
+                  name: "Hoodi",
+                  milans: ["Mahadevpura", "Hoodi", "Seetharampalya"]
                 },
                 {
                   _id: "valay_whf_3",
-                  name: "Chanasandra Valay",
-                  milans: [
-                    "Maithri layout Milan",
-                    "Imadihalli Milan",
-                    "Ambedkar Nagar Milan",
-                  ],
+                  name: "Chanasandra",
+                  milans: ["Maithri layout", "Imadihalli", "Ambedkar Nagar"]
                 },
                 {
                   _id: "valay_whf_4",
-                  name: "Seegehalli Valay",
-                  milans: [
-                    "Seegehalli Milan",
-                    "Kannamangala Milan",
-                    "Doddabanhalli Milan",
-                  ],
+                  name: "Seegehalli",
+                  milans: ["Seegehalli", "Kannamangala", "Doddabanhalli"]
                 },
                 {
                   _id: "valay_whf_5",
-                  name: "Kadugodi Valay",
-                  milans: [
-                    "Kadugodi Milan",
-                    "Belathur Milan",
-                    "Domasandra Milan",
-                  ],
-                },
-              ],
-            },
-          ],
-        },
+                  name: "Kadugodi",
+                  milans: ["Kadugodi", "Belathur", "Domasandra"]
+                }
+              ]
+            }
+          ]
+        }
       ];
 
       await Organization.insertMany(initialData);
-      return NextResponse.json({ organizations: initialData });
+      return NextResponse.json({ 
+        success: true,
+        organizations: initialData 
+      });
     }
 
-    return NextResponse.json({ organizations });
+    return NextResponse.json({ 
+      success: true,
+      organizations 
+    });
   } catch (error) {
     console.error("Organization fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch organization data" },
+      { 
+        success: false,
+        error: "Failed to fetch organization data" 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// POST endpoint to create new organization structure
+export async function POST(request: NextRequest) {
+  try {
+    await dbConnect();
+    
+    const body = await request.json();
+    const { name, khandas } = body;
+
+    if (!name) {
+      return NextResponse.json(
+        { error: "Organization name is required" },
+        { status: 400 }
+      );
+    }
+
+    const organization = new Organization({
+      name,
+      khandas: khandas || []
+    });
+
+    await organization.save();
+
+    return NextResponse.json({
+      success: true,
+      organization
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error("Organization creation error:", error);
+    return NextResponse.json(
+      { error: "Failed to create organization" },
       { status: 500 }
     );
   }
