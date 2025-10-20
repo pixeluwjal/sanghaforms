@@ -9,8 +9,6 @@ import { Eye, Plus, Sparkles, Settings, CheckCircle, RefreshCw, Layers, Loader2,
 import toast from 'react-hot-toast';
 import { debounce } from 'lodash';
 
-// --- MOCK/PLACEHOLDER IMPORTS FOR SELF-CONTAINED FILE ---
-import { Form, Section, Field, FormSettings } from './shared/types';
 import BuildTab from './tabs/BuildTab';
 import AITab from './tabs/AITab';
 import SettingsTab from './tabs/SettingsTab';
@@ -355,6 +353,357 @@ interface PreviewTabProps {
 }
 
 const PreviewTab = ({ form }: PreviewTabProps) => {
+    const [formData, setFormData] = useState<Record<string, any>>({});
+    const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
+
+    // Initialize all fields as visible by default
+    useEffect(() => {
+        const allFieldIds = new Set<string>();
+        const collectFieldIds = (fields: Field[]) => {
+            fields.forEach(field => {
+                allFieldIds.add(field.id);
+                if (field.nestedFields && field.nestedFields.length > 0) {
+                    collectFieldIds(field.nestedFields);
+                }
+            });
+        };
+
+        form.sections.forEach(section => {
+            collectFieldIds(section.fields);
+        });
+
+        setVisibleFields(allFieldIds);
+    }, [form]);
+
+    // Handle form data changes and evaluate conditional logic
+    const handleFieldChange = (fieldId: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [fieldId]: value
+        }));
+
+        // Evaluate conditional logic for all fields
+        evaluateConditionalLogic(fieldId, value);
+    };
+
+    // Recursively evaluate conditional logic
+    const evaluateConditionalLogic = (changedFieldId: string, changedValue: any) => {
+        const updatedVisibleFields = new Set(visibleFields);
+        let hasChanges = false;
+
+        const evaluateFieldRules = (field: Field) => {
+            // Check if this field has conditional rules
+            if (field.conditionalRules && field.conditionalRules.length > 0) {
+                field.conditionalRules.forEach(rule => {
+                    if (rule.targetField === changedFieldId) {
+                        const shouldBeVisible = evaluateRule(rule, changedValue);
+                        
+                        if (shouldBeVisible) {
+                            if (!updatedVisibleFields.has(field.id)) {
+                                updatedVisibleFields.add(field.id);
+                                hasChanges = true;
+                            }
+                        } else {
+                            if (updatedVisibleFields.has(field.id)) {
+                                updatedVisibleFields.delete(field.id);
+                                hasChanges = true;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Recursively check nested fields
+            if (field.nestedFields && field.nestedFields.length > 0) {
+                field.nestedFields.forEach(nestedField => evaluateFieldRules(nestedField));
+            }
+        };
+
+        // Evaluate rules for all fields in all sections
+        form.sections.forEach(section => {
+            section.fields.forEach(field => evaluateFieldRules(field));
+        });
+
+        if (hasChanges) {
+            setVisibleFields(updatedVisibleFields);
+        }
+    };
+
+    // Evaluate a single rule
+    const evaluateRule = (rule: ConditionalRule, value: any): boolean => {
+        const stringValue = String(value).toLowerCase();
+        const ruleValue = String(rule.value).toLowerCase();
+
+        switch (rule.operator) {
+            case 'equals':
+                return stringValue === ruleValue;
+            case 'not_equals':
+                return stringValue !== ruleValue;
+            case 'contains':
+                return stringValue.includes(ruleValue);
+            case 'greater_than':
+                return Number(value) > Number(rule.value);
+            case 'less_than':
+                return Number(value) < Number(rule.value);
+            default:
+                return true;
+        }
+    };
+
+    // Recursive function to render fields with conditional logic
+    const renderFieldWithConditional = (field: Field, level = 0) => {
+        // Skip if field is not visible
+        if (!visibleFields.has(field.id)) {
+            return null;
+        }
+
+        const commonInputClasses = "w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-xl bg-white text-sm sm:text-base shadow-sm focus:border-purple-500 focus:ring-3 focus:ring-purple-500/20 transition-all duration-300";
+        const inputId = `field-${field.id}`;
+        
+        const handleInputChange = (value: any) => {
+            handleFieldChange(field.id, value);
+        };
+
+        const inputElement = (() => {
+            switch (field.type) {
+                case 'text': 
+                case 'email': 
+                case 'number': 
+                    return (
+                        <input 
+                            id={inputId} 
+                            name={field.id} 
+                            type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'} 
+                            required={field.required} 
+                            placeholder={field.placeholder} 
+                            className={commonInputClasses}
+                            onChange={(e) => handleInputChange(e.target.value)}
+                            value={formData[field.id] || ''}
+                        />
+                    );
+                case 'textarea': 
+                    return (
+                        <textarea 
+                            id={inputId} 
+                            name={field.id} 
+                            required={field.required} 
+                            placeholder={field.placeholder} 
+                            rows={4} 
+                            className={`${commonInputClasses} resize-y`}
+                            onChange={(e) => handleInputChange(e.target.value)}
+                            value={formData[field.id] || ''}
+                        />
+                    );
+                case 'select': 
+                    return (
+                        <div className="relative">
+                            <select 
+                                id={inputId} 
+                                name={field.id} 
+                                required={field.required} 
+                                className={`${commonInputClasses} appearance-none pr-8 sm:pr-10 bg-white cursor-pointer`}
+                                onChange={(e) => handleInputChange(e.target.value)}
+                                value={formData[field.id] || ''}
+                            >
+                                <option value="">{field.placeholder || `Select ${field.label}`}</option>
+                                {field.options?.map((option, idx) => (
+                                    <option key={idx} value={option}>{option}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-500" />
+                        </div>
+                    );
+                case 'radio': 
+                    return (
+                        <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-gray-50/80 rounded-xl border border-gray-200/60">
+                            {field.options?.map((option, idx) => (
+                                <label key={idx} className="flex items-center gap-2 sm:gap-3 text-gray-700 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name={field.id} 
+                                        required={field.required} 
+                                        value={option} 
+                                        className="text-purple-600 border-gray-300 w-4 h-4 sm:w-5 sm:h-5 focus:ring-purple-500"
+                                        onChange={(e) => handleInputChange(e.target.value)}
+                                        checked={formData[field.id] === option}
+                                    />
+                                    <span className="text-sm sm:text-base">{option}</span>
+                                </label>
+                            ))}
+                        </div>
+                    );
+                case 'checkbox': 
+                    return (
+                        <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 bg-gray-50/80 rounded-xl border border-gray-200/60">
+                            {field.options?.map((option, idx) => (
+                                <label key={idx} className="flex items-center gap-2 sm:gap-3 text-gray-700 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        name={field.id} 
+                                        value={option} 
+                                        className="rounded text-purple-600 border-gray-300 w-4 h-4 sm:w-5 sm:h-5 focus:ring-purple-500"
+                                        onChange={(e) => {
+                                            const currentValues = formData[field.id] || [];
+                                            const newValues = e.target.checked 
+                                                ? [...currentValues, option]
+                                                : currentValues.filter((v: string) => v !== option);
+                                            handleInputChange(newValues);
+                                        }}
+                                        checked={formData[field.id]?.includes(option) || false}
+                                    />
+                                    <span className="text-sm sm:text-base">{option}</span>
+                                </label>
+                            ))}
+                        </div>
+                    );
+                case 'date': 
+                    return (
+                        <input 
+                            id={inputId} 
+                            name={field.id} 
+                            type="date" 
+                            required={field.required} 
+                            className={commonInputClasses}
+                            onChange={(e) => handleInputChange(e.target.value)}
+                            value={formData[field.id] || ''}
+                        />
+                    );
+                case 'sangha': 
+                    return <SanghaHierarchyField field={field} />;
+                case 'file': 
+                    return (
+                        <div className="border-2 border-dashed border-purple-400 rounded-2xl p-4 sm:p-8 text-center bg-purple-50/50 hover:border-purple-600 transition-all duration-300 cursor-pointer">
+                            <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10 text-purple-600 mx-auto mb-2 sm:mb-3" />
+                            <p className="text-sm sm:text-base text-gray-800 font-bold">Click or drag files here</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2">Max 10MB per file. Supports: Images, PDF, Docs</p>
+                        </div>
+                    );
+                case 'whatsapp_optin': 
+                    return (
+                        <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-gradient-to-br from-green-50/60 to-emerald-50/60 rounded-2xl border-2 border-green-200/60 shadow-inner">
+                            <p className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-green-800">
+                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                                WhatsApp Updates: {field.label}
+                            </p>
+                            
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-green-700 mb-2">
+                                    Mobile Number *
+                                </label>
+                                <input 
+                                    type="tel"
+                                    id={`${field.id}-mobile`}
+                                    name={`${field.id}-mobile`}
+                                    required={field.required}
+                                    placeholder="Enter your 10-digit mobile number"
+                                    pattern="[0-9]{10}"
+                                    className={commonInputClasses}
+                                    onChange={(e) => handleInputChange({ ...formData[field.id], mobile: e.target.value })}
+                                    value={formData[field.id]?.mobile || ''}
+                                />
+                            </div>
+                            
+                            <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-white/80 rounded-xl border border-green-200">
+                                <input
+                                    type="checkbox"
+                                    id={`${field.id}-consent`}
+                                    name={`${field.id}-consent`}
+                                    required={field.required}
+                                    className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 text-green-600 border-green-300 rounded focus:ring-green-500"
+                                    onChange={(e) => handleInputChange({ ...formData[field.id], consent: e.target.checked })}
+                                    checked={formData[field.id]?.consent || false}
+                                />
+                                <label htmlFor={`${field.id}-consent`} className="text-xs sm:text-sm text-green-800 font-medium">
+                                    I opt-in to receive communication about Yuva initiatives via WhatsApp group
+                                </label>
+                            </div>
+                        </div>
+                    );
+                case 'arratai_optin': 
+                    return (
+                        <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-gradient-to-br from-blue-50/60 to-sky-50/60 rounded-2xl border-2 border-blue-200/60 shadow-inner">
+                            <p className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg font-bold text-blue-800">
+                                <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                                Arratai Platform: {field.label}
+                            </p>
+                            
+                            <div>
+                                <label className="block text-xs sm:text-sm font-medium text-blue-700 mb-2">
+                                    Mobile Number for Arratai *
+                                </label>
+                                <input 
+                                    type="tel"
+                                    id={`${field.id}-mobile`}
+                                    name={`${field.id}-mobile`}
+                                    required={field.required}
+                                    placeholder="Enter your 10-digit mobile number for Arratai"
+                                    pattern="[0-9]{10}"
+                                    className={commonInputClasses}
+                                    onChange={(e) => handleInputChange({ ...formData[field.id], mobile: e.target.value })}
+                                    value={formData[field.id]?.mobile || ''}
+                                />
+                            </div>
+                            
+                            <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-white/80 rounded-xl border border-blue-200">
+                                <input
+                                    type="checkbox"
+                                    id={`${field.id}-consent`}
+                                    name={`${field.id}-consent`}
+                                    required={field.required}
+                                    className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                                    onChange={(e) => handleInputChange({ ...formData[field.id], consent: e.target.checked })}
+                                    checked={formData[field.id]?.consent || false}
+                                />
+                                <label htmlFor={`${field.id}-consent`} className="text-xs sm:text-sm text-blue-800 font-medium">
+                                    I would like to join the Arratai platform to connect with like-minded individuals and participate in Yuva initiatives
+                                </label>
+                            </div>
+                        </div>
+                    );
+                default: 
+                    return (
+                        <div className="p-3 sm:p-4 bg-red-50/80 border border-red-200 rounded-xl">
+                            <p className="text-red-600 text-xs sm:text-sm font-medium">Unsupported field type: {field.type}</p>
+                        </div>
+                    );
+            }
+        })();
+
+        return (
+            <div 
+                className={`mb-4 sm:mb-6 p-3 sm:p-5 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/60 hover:shadow-xl transition-all duration-300 ${
+                    level > 0 ? 'ml-4 sm:ml-6 border-l-4 border-purple-200 bg-purple-50/30' : ''
+                }`}
+                style={{ marginLeft: level > 0 ? `${level * 1}rem` : '0' }}
+            >
+                <label htmlFor={inputId} className="block text-sm sm:text-base font-bold text-gray-800 mb-2 sm:mb-3">
+                    {field.label}
+                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                    {field.conditionalRules && field.conditionalRules.length > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                            <Eye className="w-3 h-3" />
+                            Conditional
+                        </span>
+                    )}
+                </label>
+                {inputElement}
+
+                {/* Render nested fields if they exist and are visible */}
+                {field.nestedFields && field.nestedFields.length > 0 && (
+                    <div className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+                        <h4 className="text-sm font-semibold text-purple-800 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            Nested Fields
+                        </h4>
+                        {field.nestedFields.map(nestedField => 
+                            renderFieldWithConditional(nestedField, level + 1)
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-[70vh] bg-gradient-to-br from-purple-50/30 to-indigo-100/30 py-6 sm:py-10 px-3 sm:px-6 lg:px-8 border-4 border-dashed border-purple-300 rounded-3xl shadow-inner">
             <div className="text-center mb-6 sm:mb-8">
@@ -388,16 +737,30 @@ const PreviewTab = ({ form }: PreviewTabProps) => {
                             <p className="text-sm sm:text-md text-gray-500 mb-4 sm:mb-6 border-b border-gray-200/60 pb-3 sm:pb-4">{section.description}</p>
                             
                             <div className="space-y-4 sm:space-y-6">
-                                {section.fields.map((field) => (
-                                    <FormField key={field.id} field={field} />
-                                ))}
+                                {section.fields.map((field) => 
+                                    renderFieldWithConditional(field)
+                                )}
                             </div>
                         </div>
                     ))}
                 </div>
 
+                {/* Conditional Logic Demo Notice */}
+                <div className="mt-8 sm:mt-12 p-4 sm:p-6 bg-purple-50/90 backdrop-blur-sm rounded-2xl shadow-lg border-2 border-purple-200 text-center">
+                    <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+                        <h4 className="text-lg sm:text-xl font-bold text-purple-800">Conditional Logic Active</h4>
+                    </div>
+                    <p className="text-sm sm:text-base text-purple-700">
+                        Fields with conditional rules will show/hide based on your input. Try changing values to see the magic!
+                    </p>
+                    <p className="text-xs sm:text-sm text-purple-600 mt-2">
+                        Fields marked with <span className="inline-flex items-center gap-1 px-1 bg-purple-100 text-purple-700 text-xs rounded">Conditional</span> have rules applied.
+                    </p>
+                </div>
+
                 {/* Preview Notice - No Submit Button */}
-                <div className="mt-8 sm:mt-12 p-4 sm:p-6 bg-yellow-50/90 backdrop-blur-sm rounded-2xl shadow-lg border-2 border-yellow-200 text-center">
+                <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-yellow-50/90 backdrop-blur-sm rounded-2xl shadow-lg border-2 border-yellow-200 text-center">
                     <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                         <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
                         <h4 className="text-lg sm:text-xl font-bold text-yellow-800">Preview Mode</h4>

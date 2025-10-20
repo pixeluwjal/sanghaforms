@@ -16,17 +16,38 @@ const ConditionalRuleSchema = new mongoose.Schema({
   }
 });
 
+const FieldConditionalRuleSchema = new mongoose.Schema({
+  id: String,
+  targetField: String, // The field that triggers the condition
+  operator: {
+    type: String,
+    enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than']
+  },
+  value: mongoose.Schema.Types.Mixed,
+  action: {
+    type: String,
+    enum: ['show', 'hide', 'enable', 'disable'],
+    default: 'show'
+  }
+});
+
+// FIXED: Added nestedFields to the FieldSchema
 const FieldSchema = new mongoose.Schema({
   id: String,
   type: {
     type: String,
-    enum: ['text', 'email', 'number', 'textarea', 'select', 'radio', 'checkbox', 'date', 'sangha', 'file']
+    enum: ['text', 'email', 'number', 'textarea', 'select', 'radio', 'checkbox', 'date', 'sangha', 'file', 'whatsapp_optin', 'arratai_optin']
   },
   label: String,
   placeholder: String,
   required: Boolean,
   options: [String],
-  order: Number
+  order: Number,
+  conditionalRules: [FieldConditionalRuleSchema],
+  nestedFields: [{
+    type: mongoose.Schema.Types.Mixed, // Recursive reference to FieldSchema
+    default: []
+  }]
 });
 
 const SectionSchema = new mongoose.Schema({
@@ -60,11 +81,9 @@ const SettingsSchema = new mongoose.Schema({
   enableCustomSlug: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   
-  // --- NEW FIELDS ---
-  showGroupLinks: { type: Boolean, default: false }, // Toggle to enable/disable group link display
+  showGroupLinks: { type: Boolean, default: false },
   whatsappGroupLink: { type: String, default: '' },
   arrataiGroupLink: { type: String, default: '' }
-  // --- END NEW FIELDS ---
 });
 
 const FormSchema = new mongoose.Schema({

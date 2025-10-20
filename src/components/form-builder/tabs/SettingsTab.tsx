@@ -22,6 +22,10 @@ import {
   Eye,
   Layout,
   Globe,
+  Edit3,
+  Save,
+  Type,
+  FileText
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { debounce } from "lodash";
@@ -53,6 +57,7 @@ type Theme = {
 type Form = {
   _id: string;
   title: string;
+  description?: string;
   status: "draft" | "published";
   settings: FormSettings;
   theme: Theme;
@@ -225,6 +230,138 @@ const FeatureCard = ({
     </div>
   </div>
 );
+
+// Editable Form Title & Description Component
+const FormDetailsEditor = ({ 
+  form, 
+  onUpdate 
+}: { 
+  form: Form; 
+  onUpdate: (updates: Partial<Form>) => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localTitle, setLocalTitle] = useState(form.title);
+  const [localDescription, setLocalDescription] = useState(form.description || "");
+
+  const handleSave = () => {
+    if (localTitle.trim() === "") {
+      toast.error("Form title cannot be empty");
+      return;
+    }
+
+    onUpdate({
+      title: localTitle.trim(),
+      description: localDescription.trim() || undefined
+    });
+    setIsEditing(false);
+    toast.success("Form details updated!");
+  };
+
+  const handleCancel = () => {
+    setLocalTitle(form.title);
+    setLocalDescription(form.description || "");
+    setIsEditing(false);
+  };
+
+  return (
+    <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
+      <header className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center shadow-lg">
+            <Type className="w-7 h-7 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900">Form Details</h3>
+            <p className="text-sm text-slate-500">Edit title and description</p>
+          </div>
+        </div>
+        
+        {!isEditing ? (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span className="font-semibold">Edit</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-xl hover:bg-slate-600 transition-all duration-300 shadow-lg"
+            >
+              <X className="w-4 h-4" />
+              <span className="font-semibold">Cancel</span>
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              <Save className="w-4 h-4" />
+              <span className="font-semibold">Save</span>
+            </button>
+          </div>
+        )}
+      </header>
+
+      <div className="space-y-6">
+        {/* Title Input */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-purple-600" />
+            Form Title
+          </label>
+          {isEditing ? (
+            <input
+              type="text"
+              value={localTitle}
+              onChange={(e) => setLocalTitle(e.target.value)}
+              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-lg font-semibold transition-all duration-200 shadow-sm"
+              placeholder="Enter form title..."
+              maxLength={100}
+            />
+          ) : (
+            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent">
+              <h4 className="text-lg font-semibold text-slate-800">{form.title}</h4>
+            </div>
+          )}
+          <div className="text-xs text-slate-500 flex justify-between">
+            <span>This will be displayed as the main form heading</span>
+            {isEditing && <span>{localTitle.length}/100 characters</span>}
+          </div>
+        </div>
+
+        {/* Description Input */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-purple-600" />
+            Description
+          </label>
+          {isEditing ? (
+            <textarea
+              value={localDescription}
+              onChange={(e) => setLocalDescription(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm resize-none"
+              placeholder="Describe the purpose of this form..."
+              maxLength={500}
+            />
+          ) : (
+            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent min-h-[80px]">
+              <p className="text-sm text-slate-700">
+                {form.description || "No description provided"}
+              </p>
+            </div>
+          )}
+          <div className="text-xs text-slate-500 flex justify-between">
+            <span>Optional description to provide context to respondents</span>
+            {isEditing && <span>{localDescription.length}/500 characters</span>}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
   const defaultSettings: FormSettings = {
@@ -521,20 +658,20 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8 pb-12 font-sans">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 space-y-8 pb-12 font-sans">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex flex-col items-center p-6 bg-gradient-to-br from-purple-50 to-indigo-50/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-purple-100/50">
-          <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/50 mb-4">
+        <div className="inline-flex flex-col items-center p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-indigo-50/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-purple-100/50 w-full max-w-4xl">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/50 mb-4">
             <Settings
-              className="w-10 h-10 text-white animate-pulse"
+              className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-pulse"
               style={{ animationDuration: "4s" }}
             />
           </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-br from-purple-600 to-indigo-700 bg-clip-text text-transparent tracking-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-br from-purple-600 to-indigo-700 bg-clip-text text-transparent tracking-tight px-4">
             Form Configuration
           </h2>
-          <p className="mt-3 text-lg text-slate-600 max-w-2xl">
+          <p className="mt-3 text-sm sm:text-lg text-slate-600 max-w-2xl px-4">
             Customize your form's appearance, behavior, and sharing options
           </p>
         </div>
@@ -547,9 +684,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         </div>
       )}
 
+      {/* Form Details Editor - NEW SECTION */}
+      <FormDetailsEditor form={form} onUpdate={onUpdate} />
+
       {/* Status Banner */}
       <div
-        className={`p-6 rounded-3xl text-center shadow-xl transition-all duration-500 backdrop-blur-sm ${
+        className={`p-4 sm:p-6 rounded-3xl text-center shadow-xl transition-all duration-500 backdrop-blur-sm ${
           form.status === "published"
             ? "bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 text-green-800"
             : "bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 text-amber-800"
@@ -558,42 +698,42 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         <div className="flex items-center justify-center gap-3 mb-2">
           {form.status === "published" ? (
             <>
-              <Rocket className="w-7 h-7 text-green-600" />
-              <h4 className="font-bold text-2xl">FORM IS LIVE</h4>
+              <Rocket className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
+              <h4 className="font-bold text-xl sm:text-2xl">FORM IS LIVE</h4>
             </>
           ) : (
             <>
-              <AlertTriangle className="w-7 h-7 text-amber-600" />
-              <h4 className="font-bold text-2xl">FORM IS DRAFT</h4>
+              <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600" />
+              <h4 className="font-bold text-xl sm:text-2xl">FORM IS DRAFT</h4>
             </>
           )}
         </div>
-        <p className="text-sm font-medium text-slate-600">
+        <p className="text-xs sm:text-sm font-medium text-slate-600">
           {form.status === "published"
             ? `Your form is publicly accessible at:`
             : "Your form is not currently visible to the public"}
         </p>
         {form.status === "published" && (
-          <p className="mt-2 font-mono text-sm bg-white/50 px-4 py-2 rounded-xl border border-green-200 inline-block">
+          <p className="mt-2 font-mono text-xs sm:text-sm bg-white/50 px-3 sm:px-4 py-2 rounded-xl border border-green-200 inline-block max-w-full overflow-x-auto">
             {currentFormUrl}
           </p>
         )}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Theme & Settings */}
-        <div className="space-y-8">
+        <div className="space-y-6 lg:space-y-8">
           {/* Theme Customization */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
             <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <Palette className="w-7 h-7 text-purple-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-lg">
+                <Palette className="w-6 h-6 sm:w-7 sm:h-7 text-purple-600" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Theme Design
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-500">
                   Customize the visual appearance
                 </p>
               </div>
@@ -601,14 +741,14 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
 
             {/* Theme Preview */}
             {previewTheme && (
-              <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-purple-200 animate-in fade-in duration-500">
+              <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-purple-200 animate-in fade-in duration-500">
                 <div className="text-center mb-4">
-                  <h4 className="font-bold text-slate-700 text-lg flex items-center justify-center gap-2">
-                    <Layout className="w-5 h-5 text-purple-600" /> Live Preview
+                  <h4 className="font-bold text-slate-700 text-base sm:text-lg flex items-center justify-center gap-2">
+                    <Layout className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" /> Live Preview
                   </h4>
                 </div>
                 <div
-                  className="p-6 rounded-2xl border-2 border-slate-200 shadow-lg"
+                  className="p-4 sm:p-6 rounded-2xl border-2 border-slate-200 shadow-lg"
                   style={{
                     backgroundColor: theme.backgroundColor,
                     color: theme.textColor,
@@ -616,17 +756,17 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                   }}
                 >
                   <div className="space-y-4">
-                    <h5 className="text-2xl font-bold">Sample Form Title</h5>
+                    <h5 className="text-lg sm:text-2xl font-bold">Sample Form Title</h5>
                     <div className="space-y-3">
                       <input
                         type="text"
                         placeholder="Sample input field..."
-                        className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 transition-colors"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 transition-colors"
                         style={{ borderColor: theme.primaryColor + "40" }}
                         disabled
                       />
                       <button
-                        className="w-full px-4 py-3 rounded-xl font-bold transition-transform hover:scale-[1.02] text-base shadow-lg"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold transition-transform hover:scale-[1.02] text-sm sm:text-base shadow-lg"
                         style={{
                           backgroundColor: theme.primaryColor,
                           color: "white",
@@ -680,22 +820,22 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
               onClick={() => setPreviewTheme(!previewTheme)}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all duration-300 text-purple-700 font-semibold border border-purple-200 hover:border-purple-300"
             >
-              <Eye className="w-5 h-5" />
+              <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
               {previewTheme ? "Hide Live Preview" : "Show Live Preview"}
             </button>
           </section>
 
           {/* Form Features */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
             <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <Zap className="w-7 h-7 text-blue-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl flex items-center justify-center shadow-lg">
+                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Form Features
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-500">
                   Configure form behavior and options
                 </p>
               </div>
@@ -733,45 +873,45 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         </div>
 
         {/* Right Column - URL & Actions */}
-        <div className="space-y-8">
+        <div className="space-y-6 lg:space-y-8">
           {/* URL & Links Section */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
             <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-14 h-14 bg-gradient-to-br from-teal-100 to-green-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <LinkIcon className="w-7 h-7 text-teal-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-teal-100 to-green-100 rounded-2xl flex items-center justify-center shadow-lg">
+                <LinkIcon className="w-6 h-6 sm:w-7 sm:h-7 text-teal-600" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
                   Form Access
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-xs sm:text-sm text-slate-500">
                   Configure your public URL and links
                 </p>
               </div>
             </header>
 
             {/* Current Live URL Display */}
-            <div className="p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+            <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
                   Public Form Link
                 </p>
-                <p className="text-base font-mono break-all text-purple-900 font-medium">
+                <p className="text-sm sm:text-base font-mono break-all text-purple-900 font-medium">
                   {currentFormUrl}
                 </p>
               </div>
               <button
                 onClick={() => copyToClipboard(currentFormUrl, "main")}
-                className={`p-3 rounded-xl transition-all duration-300 flex-shrink-0 shadow-lg ${
+                className={`p-2 sm:p-3 rounded-xl transition-all duration-300 flex-shrink-0 shadow-lg ${
                   copiedLink === "main"
                     ? "bg-green-500 text-white scale-110"
                     : "bg-white text-purple-600 hover:bg-purple-50 border border-purple-200 hover:scale-105"
                 }`}
               >
                 {copiedLink === "main" ? (
-                  <CheckCheck className="w-5 h-5" />
+                  <CheckCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 ) : (
-                  <Copy className="w-5 h-5" />
+                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </button>
             </div>
@@ -781,9 +921,9 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
               <div className="flex items-center justify-between">
                 <label
                   id="custom-slug-label"
-                  className="font-semibold text-slate-700 text-lg flex items-center gap-3"
+                  className="font-semibold text-slate-700 text-base sm:text-lg flex items-center gap-3"
                 >
-                  <Target className="w-6 h-6 text-purple-600" /> Custom URL Slug
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" /> Custom URL Slug
                 </label>
                 <ToggleSwitch
                   checked={settings.enableCustomSlug}
@@ -791,12 +931,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                   labelId="custom-slug-label"
                 />
               </div>
-              <p className="text-sm text-slate-500">
+              <p className="text-xs sm:text-sm text-slate-500">
                 Use a memorable, human-readable URL instead of the default ID.
               </p>
 
               {settings.enableCustomSlug && (
-                <div className="p-5 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-4 animate-in fade-in duration-500">
+                <div className="p-4 sm:p-5 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-4 animate-in fade-in duration-500">
                   <label className="block text-sm font-bold text-slate-700">
                     Set Custom Slug
                   </label>
@@ -809,10 +949,10 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                         type="text"
                         value={settings.customSlug ?? ""}
                         onChange={handleSlugChange}
-                        className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm font-medium"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm font-medium"
                         placeholder="my-special-event"
                       />
-                      <div className="mt-1 text-xs text-slate-500">
+                      <div className="mt-1 text-xs text-slate-500 break-all">
                         Full URL: {appOrigin}
                         {BASE_FORM_PATH}
                         {settings.customSlug}
@@ -822,10 +962,11 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                     {/* Auto-Generate Button */}
                     <button
                       onClick={generateSlugFromTitle}
-                      className="px-4 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 flex-shrink-0 whitespace-nowrap"
+                      className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 flex-shrink-0 whitespace-nowrap"
                     >
                       <Target className="w-4 h-4" />
-                      Auto-Generate
+                      <span className="hidden sm:inline">Auto-Generate</span>
+                      <span className="sm:hidden">Auto</span>
                     </button>
                   </div>
 
@@ -854,9 +995,9 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
               <div className="flex items-center justify-between">
                 <label
                   id="show-groups-label"
-                  className="font-semibold text-slate-700 text-lg flex items-center gap-3"
+                  className="font-semibold text-slate-700 text-base sm:text-lg flex items-center gap-3"
                 >
-                  <Smartphone className="w-6 h-6 text-purple-600" /> Community
+                  <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" /> Community
                   Links
                 </label>
                 <ToggleSwitch
@@ -865,15 +1006,15 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                   labelId="show-groups-label"
                 />
               </div>
-              <p className="text-sm text-slate-500">
+              <p className="text-xs sm:text-sm text-slate-500">
                 Show links to community groups on the form completion page.
               </p>
 
               {settings.showGroupLinks && (
-                <div className="p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 space-y-4 animate-in fade-in duration-500">
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 space-y-4 animate-in fade-in duration-500">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5 text-green-600" />{" "}
+                      <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />{" "}
                       WhatsApp Group
                     </label>
                     <input
@@ -882,14 +1023,14 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                       onChange={(e) =>
                         updateSettings({ whatsappGroupLink: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
                       placeholder="chat.whatsapp.com/invitecode"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                      <UsersIcon className="w-5 h-5 text-orange-600" /> Arratai
+                      <UsersIcon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" /> Arratai
                       Group
                     </label>
                     <input
@@ -898,7 +1039,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                       onChange={(e) =>
                         updateSettings({ arrataiGroupLink: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
                       placeholder="arratai-group.com/join"
                     />
                   </div>
@@ -908,32 +1049,32 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
           </section>
 
           {/* Action Section */}
-          <section className="p-6 sm:p-8 bg-gradient-to-br from-white to-purple-50/30 rounded-3xl border-2 border-purple-200 shadow-2xl">
+          <section className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-white to-purple-50/30 rounded-3xl border-2 border-purple-200 shadow-2xl">
             <div className="text-center mb-6">
-              <h4 className="font-bold text-2xl text-slate-800 mb-2">
+              <h4 className="font-bold text-xl sm:text-2xl text-slate-800 mb-2">
                 {form.status === "published"
                   ? "Form Management"
                   : "Ready to Launch?"}
               </h4>
-              <p className="text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600">
                 {form.status === "published"
                   ? "Your form is live and collecting responses"
                   : "Publish to make your form publicly accessible"}
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               {form.status === "published" ? (
                 <>
                   <button
                     onClick={() => handleSaveChanges("draft")}
                     disabled={saveStatus === "loading"}
-                    className="flex-1 px-6 py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-2xl hover:shadow-2xl hover:shadow-red-300/50 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-3 shadow-lg"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-2xl hover:shadow-2xl hover:shadow-red-300/50 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 shadow-lg text-sm sm:text-base"
                   >
                     {saveStatus === "loading" ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                     {saveStatus === "loading"
                       ? "Unpublishing..."
@@ -942,12 +1083,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                   <button
                     onClick={() => handleSaveChanges("published")}
                     disabled={saveStatus === "loading"}
-                    className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-2xl hover:shadow-2xl hover:shadow-purple-300/60 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-3 shadow-lg"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-2xl hover:shadow-2xl hover:shadow-purple-300/60 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 shadow-lg text-sm sm:text-base"
                   >
                     {saveStatus === "loading" ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
-                      <CheckCheck className="w-5 h-5" />
+                      <CheckCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                     {saveStatus === "loading"
                       ? "Updating..."
@@ -958,12 +1099,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                 <button
                   onClick={() => handleSaveChanges("published")}
                   disabled={saveStatus === "loading"}
-                  className="w-full px-8 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl shadow-green-300/60 hover:shadow-3xl hover:shadow-emerald-300/70 disabled:opacity-50 text-lg font-bold transition-all duration-300 flex items-center justify-center gap-3 hover:scale-105"
+                  className="w-full px-6 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl shadow-green-300/60 hover:shadow-3xl hover:shadow-emerald-300/70 disabled:opacity-50 text-base sm:text-lg font-bold transition-all duration-300 flex items-center justify-center gap-3 hover:scale-105"
                 >
                   {saveStatus === "loading" ? (
-                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
                   ) : (
-                    <Rocket className="w-6 h-6" />
+                    <Rocket className="w-5 h-5 sm:w-6 sm:h-6" />
                   )}
                   {saveStatus === "loading"
                     ? "Publishing..."
@@ -974,9 +1115,9 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
 
             {form.status === "published" && (
               <div className="mt-4 text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-200">
+                <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-200">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">
+                  <span className="text-xs sm:text-sm font-medium">
                     Live • Collecting Responses
                   </span>
                 </div>

@@ -8,14 +8,13 @@ import {
   Filter, 
   Download, 
   Eye, 
-  Calendar,
-  FileText,
   ChevronDown,
   ChevronUp,
   X,
   RefreshCw,
   FileSpreadsheet,
-  Users
+  Users,
+  Calendar
 } from 'lucide-react';
 
 interface FormResponse {
@@ -60,7 +59,14 @@ interface Organization {
     valays: Array<{
       _id: string;
       name: string;
-      milans: string[];
+      milans: Array<{
+        _id: string;
+        name: string;
+        ghatas: Array<{
+          _id: string;
+          name: string;
+        }>;
+      }>;
     }>;
   }>;
 }
@@ -70,6 +76,7 @@ interface SanghaMapping {
   khandas: Map<string, { name: string; vibhaagId: string }>;
   valayas: Map<string, { name: string; khandaId: string }>;
   milans: Map<string, { name: string; valayaId: string }>;
+  ghatas: Map<string, { name: string; milanId: string }>;
 }
 
 export default function ResponsesPage() {
@@ -80,10 +87,11 @@ export default function ResponsesPage() {
     vibhaags: new Map(),
     khandas: new Map(),
     valayas: new Map(),
-    milans: new Map()
+    milans: new Map(),
+    ghatas: new Map()
   });
   const [loading, setLoading] = useState(true);
-  const [selectedForm, setSelectedForm] = useState<string>('all');
+  const [selectedForm, setSelectedForm] = useState<string>('');
   const [dateRange, setDateRange] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +132,8 @@ export default function ResponsesPage() {
         vibhaags: new Map(),
         khandas: new Map(),
         valayas: new Map(),
-        milans: new Map()
+        milans: new Map(),
+        ghatas: new Map()
       };
 
       orgs.forEach(org => {
@@ -146,10 +155,18 @@ export default function ResponsesPage() {
             });
             
             // Map milans
-            valaya.milans?.forEach((milan, index) => {
-              mapping.milans.set(milan, {
-                name: milan,
+            valaya.milans?.forEach(milan => {
+              mapping.milans.set(milan._id, {
+                name: milan.name,
                 valayaId: valaya._id
+              });
+              
+              // Map ghatas
+              milan.ghatas?.forEach(ghata => {
+                mapping.ghatas.set(ghata._id, {
+                  name: ghata.name,
+                  milanId: milan._id
+                });
               });
             });
           });
@@ -163,7 +180,8 @@ export default function ResponsesPage() {
         vibhaags: new Map(),
         khandas: new Map(),
         valayas: new Map(),
-        milans: new Map()
+        milans: new Map(),
+        ghatas: new Map()
       };
     }
   };
@@ -185,6 +203,11 @@ export default function ResponsesPage() {
         console.log('📦 Responses data:', data);
         setResponses(data.responses || []);
         setForms(data.forms || []);
+        
+        // Auto-select the first form if available
+        if (data.forms && data.forms.length > 0 && !selectedForm) {
+          setSelectedForm(data.forms[0]._id);
+        }
       } else {
         console.error('❌ Failed to fetch responses');
         showToast('Failed to load responses', 'error');
@@ -199,7 +222,7 @@ export default function ResponsesPage() {
   };
 
   // Helper function to get Sangha hierarchy names
-  const getSanghaName = (id: string, type: 'vibhaag' | 'khanda' | 'valaya' | 'milan'): string => {
+  const getSanghaName = (id: string, type: 'vibhaag' | 'khanda' | 'valaya' | 'milan' | 'ghata'): string => {
     switch (type) {
       case 'vibhaag':
         return sanghaMapping.vibhaags.get(id) || id;
@@ -209,6 +232,8 @@ export default function ResponsesPage() {
         return sanghaMapping.valayas.get(id)?.name || id;
       case 'milan':
         return sanghaMapping.milans.get(id)?.name || id;
+      case 'ghata':
+        return sanghaMapping.ghatas.get(id)?.name || id;
       default:
         return id;
     }
@@ -222,7 +247,7 @@ export default function ResponsesPage() {
       if (field.type === 'sangha_hierarchy' && field.details) {
         const details = { ...field.details };
         
-        // Replace IDs with names
+        // Replace IDs with names for all hierarchy levels
         if (details.vibhaag) {
           details.vibhaagName = getSanghaName(details.vibhaag, 'vibhaag');
         }
@@ -235,9 +260,20 @@ export default function ResponsesPage() {
         if (details.milan) {
           details.milanName = getSanghaName(details.milan, 'milan');
         }
+        if (details.ghata) {
+          details.ghataName = getSanghaName(details.ghata, 'ghata');
+        }
         
         // Update the value to show names instead of IDs
-        field.value = `${details.vibhaagName || details.vibhaag} > ${details.khandaName || details.khanda} > ${details.valayaName || details.valaya} > ${details.milanName || details.milan}`;
+        const hierarchyPath = [
+          details.vibhaagName || details.vibhaag,
+          details.khandaName || details.khanda,
+          details.valayaName || details.valaya,
+          details.milanName || details.milan,
+          details.ghataName || details.ghata
+        ].filter(Boolean).join(' > ');
+        
+        field.value = hierarchyPath || 'Not specified';
         field.details = details;
       }
     });
@@ -252,10 +288,12 @@ export default function ResponsesPage() {
   const filteredResponses = responses
     .map(response => formatResponseWithSanghaNames(response))
     .filter(response => {
-      if (selectedForm !== 'all' && response.formId !== selectedForm) {
+      // Filter by selected form
+      if (selectedForm && response.formId !== selectedForm) {
         return false;
       }
 
+      // Filter by date range
       if (dateRange !== 'all') {
         const responseDate = new Date(response.submittedAt);
         const now = new Date();
@@ -265,6 +303,7 @@ export default function ResponsesPage() {
         }
       }
 
+      // Filter by search term
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         const hasMatchingResponse = Object.values(response.responses).some(field => 
@@ -272,9 +311,8 @@ export default function ResponsesPage() {
           field.label.toLowerCase().includes(searchLower)
         );
         const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
-        const matchesIP = response.ipAddress.toLowerCase().includes(searchLower);
         
-        if (!hasMatchingResponse && !matchesFormTitle && !matchesIP) {
+        if (!hasMatchingResponse && !matchesFormTitle) {
           return false;
         }
       }
@@ -308,8 +346,7 @@ export default function ResponsesPage() {
       const headers = [
         'Response ID',
         'Form Title',
-        'Submitted At', 
-        'IP Address',
+        'Submitted At',
         ...fieldLabels
       ];
 
@@ -324,8 +361,7 @@ export default function ResponsesPage() {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit'
-          }), 
-          response.ipAddress
+          })
         ];
         
         const responseData = fieldLabels.map(fieldLabel => {
@@ -361,80 +397,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // Enhanced Excel Export with Sangha names
-  const exportToExcel = () => {
-    try {
-      const dataToExport = selectedResponses.size > 0 
-        ? filteredResponses.filter(r => selectedResponses.has(r._id))
-        : filteredResponses;
-
-      if (dataToExport.length === 0) {
-        showToast('No data to export', 'error');
-        return;
-      }
-
-      const allFieldLabels = new Set<string>();
-      dataToExport.forEach(response => {
-        Object.values(response.responses).forEach(field => allFieldLabels.add(field.label));
-      });
-      const fieldLabels = Array.from(allFieldLabels);
-
-      const headers = [
-        'Response ID',
-        'Form Title',
-        'Submitted At', 
-        'IP Address',
-        ...fieldLabels
-      ];
-
-      const excelData = dataToExport.map(response => {
-        const baseData = [
-          response._id,
-          response.formTitle,
-          new Date(response.submittedAt).toLocaleString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          }), 
-          response.ipAddress
-        ];
-        
-        const responseData = fieldLabels.map(fieldLabel => {
-          const field = Object.values(response.responses).find(f => f.label === fieldLabel);
-          if (!field) return '';
-          
-          return String(field.value);
-        });
-
-        return [...baseData, ...responseData];
-      });
-
-      const excelContent = [
-        headers.join('\t'),
-        ...excelData.map(row => row.join('\t'))
-      ].join('\n');
-
-      const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const timestamp = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `form-responses-${timestamp}.xls`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      showToast(`Excel file exported with ${dataToExport.length} responses!`);
-    } catch (error) {
-      console.error('Excel export error:', error);
-      showToast('Failed to export Excel file', 'error');
-    }
-  };
-
   // Select/deselect all responses
   const toggleSelectAll = () => {
     if (selectedResponses.size === paginatedResponses.length) {
@@ -457,7 +419,6 @@ export default function ResponsesPage() {
   };
 
   const clearFilters = () => {
-    setSelectedForm('all');
     setDateRange('all');
     setSearchTerm('');
     setCurrentPage(1);
@@ -518,13 +479,12 @@ export default function ResponsesPage() {
               Form Responses
             </h1>
             <p className="text-gray-700 text-lg">
-              {filteredResponses.length} total submissions • {selectedResponses.size > 0 && `${selectedResponses.size} selected`}
-              {selectedForm !== 'all' && ` • Filtered by: ${forms.find(f => f._id === selectedForm)?.title}`}
+              {filteredResponses.length} submissions • {selectedResponses.size > 0 && `${selectedResponses.size} selected`}
+              {selectedForm && forms.find(f => f._id === selectedForm) && ` • ${forms.find(f => f._id === selectedForm)?.title}`}
             </p>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Hide Details Toggle */}
             <button
               onClick={() => setShowSubmissionDetails(!showSubmissionDetails)}
               className={`px-6 py-3 border rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md ${
@@ -546,41 +506,14 @@ export default function ResponsesPage() {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             
-            {/* Download Dropdown */}
-            <div className="relative group">
-              <button
-                disabled={filteredResponses.length === 0}
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Download
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              
-              {/* Download Options */}
-              <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-2xl border border-gray-200 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
-                <button
-                  onClick={exportToCSV}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-t-2xl flex items-center gap-3 text-gray-700"
-                >
-                  <FileText className="w-4 h-4 text-green-600" />
-                  <div>
-                    <div className="font-medium">Download CSV</div>
-                    <div className="text-xs text-gray-500">Compatible with all apps</div>
-                  </div>
-                </button>
-                <button
-                  onClick={exportToExcel}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 rounded-b-2xl flex items-center gap-3 text-gray-700 border-t border-gray-200"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-blue-600" />
-                  <div>
-                    <div className="font-medium">Download Excel</div>
-                    <div className="text-xs text-gray-500">Optimized for Excel</div>
-                  </div>
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={exportToCSV}
+              disabled={filteredResponses.length === 0}
+              className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
           </div>
         </div>
 
@@ -598,15 +531,15 @@ export default function ResponsesPage() {
               className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200"
             >
               <X className="w-4 h-4" />
-              Clear All
+              Clear Filters
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Form Filter */}
+            {/* Form Filter - Auto-selected, no "All Forms" option */}
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
-                Filter by Form
+                Form
               </label>
               <select
                 value={selectedForm}
@@ -616,7 +549,6 @@ export default function ResponsesPage() {
                 }}
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-gray-900 font-medium shadow-sm hover:shadow-md"
               >
-                <option value="all">All Forms ({forms.length})</option>
                 {forms.map(form => (
                   <option key={form._id} value={form._id}>
                     {form.title}
@@ -660,7 +592,7 @@ export default function ResponsesPage() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  placeholder="Search in responses, form titles, IP..."
+                  placeholder="Search in responses..."
                   className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 placeholder-gray-400 text-gray-900 font-medium shadow-sm hover:shadow-md"
                 />
               </div>
@@ -696,25 +628,19 @@ export default function ResponsesPage() {
                           className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                         />
                       </th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
-                        Form
-                      </th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
-                        Submitted
-                      </th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
-                        IP Address
-                      </th>
-                      {tableColumns.slice(0, 3).map(column => (
+                      {tableColumns.slice(0, 4).map(column => (
                         <th key={column} className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50 truncate max-w-xs">
                           {column}
                         </th>
                       ))}
-                      {tableColumns.length > 3 && (
+                      {tableColumns.length > 4 && (
                         <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
-                          +{tableColumns.length - 3} more
+                          +{tableColumns.length - 4} more
                         </th>
                       )}
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
+                        Submitted
+                      </th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50 rounded-r-2xl">
                         Actions
                       </th>
@@ -736,25 +662,7 @@ export default function ResponsesPage() {
                               className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                             />
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {response.formTitle}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-900 font-medium">
-                              {new Date(response.submittedAt).toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {new Date(response.submittedAt).toLocaleTimeString()}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded-lg inline-block">
-                              {response.ipAddress}
-                            </div>
-                          </td>
-                          {tableColumns.slice(0, 3).map(column => {
+                          {tableColumns.slice(0, 4).map(column => {
                             const field = Object.values(response.responses).find(f => f.label === column);
                             return (
                               <td key={column} className="px-4 py-4 text-sm text-gray-700 max-w-xs">
@@ -764,11 +672,19 @@ export default function ResponsesPage() {
                               </td>
                             );
                           })}
-                          {tableColumns.length > 3 && (
+                          {tableColumns.length > 4 && (
                             <td className="px-4 py-4 text-sm text-gray-500">
                               View details →
                             </td>
                           )}
+                          <td className="px-4 py-4">
+                            <div className="text-sm text-gray-900 font-medium">
+                              {new Date(response.submittedAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(response.submittedAt).toLocaleTimeString()}
+                            </div>
+                          </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
                               <button
@@ -787,14 +703,11 @@ export default function ResponsesPage() {
                         {/* Expanded Row Details */}
                         {expandedRow === response._id && (
                           <tr className="bg-gray-50/50">
-                            <td colSpan={tableColumns.length + 5} className="px-4 py-6">
+                            <td colSpan={tableColumns.length + 3} className="px-4 py-6">
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 {/* Response Data */}
                                 <div>
-                                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center gap-3 text-lg">
-                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                      <FileText className="w-4 h-4 text-blue-600" />
-                                    </div>
+                                  <h5 className="font-semibold text-gray-900 mb-4 text-lg">
                                     All Responses ({Object.keys(response.responses).length})
                                   </h5>
                                   <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -810,30 +723,48 @@ export default function ResponsesPage() {
                                         </div>
                                         <div className="text-gray-700 text-sm mt-2">
                                           {field.type === 'sangha_hierarchy' && field.details ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                               <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div>
-                                                  <span className="font-medium text-gray-600">Vibhaag:</span>
-                                                  <div className="text-gray-900 mt-1">{field.details.vibhaagName || field.details.vibhaag || 'Not provided'}</div>
-                                                </div>
-                                                <div>
-                                                  <span className="font-medium text-gray-600">Khanda:</span>
-                                                  <div className="text-gray-900 mt-1">{field.details.khandaName || field.details.khanda || 'Not provided'}</div>
-                                                </div>
+                                                {field.details.vibhaagName && (
+                                                  <div>
+                                                    <span className="font-medium text-gray-600">Vibhaag:</span>
+                                                    <div className="text-gray-900 mt-1">{field.details.vibhaagName}</div>
+                                                  </div>
+                                                )}
+                                                {field.details.khandaName && (
+                                                  <div>
+                                                    <span className="font-medium text-gray-600">Khanda:</span>
+                                                    <div className="text-gray-900 mt-1">{field.details.khandaName}</div>
+                                                  </div>
+                                                )}
                                               </div>
                                               <div className="grid grid-cols-2 gap-4 text-sm">
-                                                <div>
-                                                  <span className="font-medium text-gray-600">Valaya:</span>
-                                                  <div className="text-gray-900 mt-1">{field.details.valayaName || field.details.valaya || 'Not provided'}</div>
-                                                </div>
-                                                <div>
-                                                  <span className="font-medium text-gray-600">Milan:</span>
-                                                  <div className="text-gray-900 mt-1">{field.details.milanName || field.details.milan || 'Not provided'}</div>
-                                                </div>
+                                                {field.details.valayaName && (
+                                                  <div>
+                                                    <span className="font-medium text-gray-600">Valaya:</span>
+                                                    <div className="text-gray-900 mt-1">{field.details.valayaName}</div>
+                                                  </div>
+                                                )}
+                                                {field.details.milanName && (
+                                                  <div>
+                                                    <span className="font-medium text-gray-600">Milan:</span>
+                                                    <div className="text-gray-900 mt-1">{field.details.milanName}</div>
+                                                  </div>
+                                                )}
                                               </div>
+                                              {field.details.ghataName && (
+                                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                                  <div>
+                                                    <span className="font-medium text-gray-600">Ghata:</span>
+                                                    <div className="text-gray-900 mt-1">{field.details.ghataName}</div>
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
                                           ) : (
-                                            String(field.value)
+                                            <div className="whitespace-pre-wrap break-words">
+                                              {String(field.value)}
+                                            </div>
                                           )}
                                         </div>
                                       </div>
@@ -844,10 +775,7 @@ export default function ResponsesPage() {
                                 {/* Metadata */}
                                 {showSubmissionDetails && (
                                   <div>
-                                    <h5 className="font-semibold text-gray-900 mb-4 flex items-center gap-3 text-lg">
-                                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <Eye className="w-4 h-4 text-purple-600" />
-                                      </div>
+                                    <h5 className="font-semibold text-gray-900 mb-4 text-lg">
                                       Submission Details
                                     </h5>
                                     <div className="space-y-3">
@@ -860,10 +788,8 @@ export default function ResponsesPage() {
                                             </div>
                                           </div>
                                           <div>
-                                            <span className="font-medium text-gray-700">Form ID:</span>
-                                            <div className="text-gray-900 font-mono text-xs mt-1 bg-gray-100 p-2 rounded-lg">
-                                              {response.formId}
-                                            </div>
+                                            <span className="font-medium text-gray-700">Form Title:</span>
+                                            <div className="text-gray-900 mt-1">{response.formTitle}</div>
                                           </div>
                                           <div>
                                             <span className="font-medium text-gray-700">Form Type:</span>
@@ -896,18 +822,18 @@ export default function ResponsesPage() {
             ) : (
               <div className="text-center py-16">
                 <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-indigo-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <FileText className="w-10 h-10 text-purple-600" />
+                  <Users className="w-10 h-10 text-purple-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   No responses found
                 </h3>
                 <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto leading-relaxed">
-                  {searchTerm || selectedForm !== 'all' || dateRange !== 'all'
+                  {searchTerm || dateRange !== 'all'
                     ? 'Try adjusting your filters to see more results'
                     : 'No form responses have been submitted yet'
                   }
                 </p>
-                {searchTerm || selectedForm !== 'all' || dateRange !== 'all' ? (
+                {searchTerm || dateRange !== 'all' ? (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
@@ -919,7 +845,7 @@ export default function ResponsesPage() {
                     href="/admin/forms"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
                   >
-                    <FileText className="w-4 h-4" />
+                    <Calendar className="w-4 h-4" />
                     Create a Form
                   </Link>
                 )}

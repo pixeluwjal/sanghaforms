@@ -26,7 +26,7 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-  { name: 'Account Settings', href: '/admin/forms/create', icon: Settings }
+  { name: 'Sangha Hierarchy', href: '/admin/sangha-hierarchy', icon: Users }
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

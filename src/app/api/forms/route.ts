@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,11 +11,16 @@ export async function POST(request: NextRequest) {
     
     const { title, description, theme } = await request.json();
     
-    if (!title) {
+    if (!title || title.trim() === '') {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
     }
 
-    // ADD AUTH TO GET THE CREATOR ID
+    // Validate title length
+    if (title.length > 100) {
+      return NextResponse.json({ error: 'Title must be less than 100 characters' }, { status: 400 });
+    }
+
+    // Get creator from token
     const token = request.cookies.get('token')?.value;
     let createdBy = null;
     
@@ -28,8 +34,8 @@ export async function POST(request: NextRequest) {
     }
 
     const form = new Form({
-      title,
-      description,
+      title: title.trim(),
+      description: description?.trim() || '',
       theme: theme || {
         primaryColor: '#7C3AED',
         backgroundColor: '#FFFFFF',
@@ -39,23 +45,30 @@ export async function POST(request: NextRequest) {
       settings: {
         validityDuration: 30,
         maxResponses: 1000,
-        isActive: true
+        isActive: true,
+        showGroupLinks: false,
+        whatsappGroupLink: '',
+        arrataiGroupLink: ''
       },
       sections: [],
       status: 'draft',
-      createdBy: createdBy // ADD THIS LINE
+      createdBy: createdBy
     });
 
     await form.save();
 
     return NextResponse.json({ 
       success: true, 
-      formId: form._id 
-    });
+      formId: form._id,
+      message: 'Form created successfully'
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Form creation error:', error);
-    return NextResponse.json({ error: 'Failed to create form' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to create form',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -67,7 +80,12 @@ export async function GET(request: NextRequest) {
     const formId = searchParams.get('id');
 
     if (!formId) {
-      return NextResponse.json({ error: 'Form ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(formId)) {
+      return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
     }
 
     const form = await Form.findById(formId);
@@ -75,10 +93,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ form });
+    return NextResponse.json({ 
+      success: true,
+      form 
+    });
 
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch form' }, { status: 500 });
+    console.error('Form fetch error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch form',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -89,22 +114,81 @@ export async function PUT(request: NextRequest) {
     const { formId, ...updateData } = await request.json();
     
     if (!formId) {
-      return NextResponse.json({ error: 'Form ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
     }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(formId)) {
+      return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
+    }
+
+    // Prevent updating certain fields
+    const { _id, createdBy, createdAt, ...safeUpdateData } = updateData;
 
     const form = await Form.findByIdAndUpdate(
       formId, 
-      { ...updateData, updatedAt: new Date() },
-      { new: true }
+      { 
+        ...safeUpdateData, 
+        updatedAt: new Date() 
+      },
+      { 
+        new: true,
+        runValidators: true // Ensure schema validation runs
+      }
     );
 
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, form });
+    return NextResponse.json({ 
+      success: true, 
+      form,
+      message: 'Form updated successfully'
+    });
 
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update form' }, { status: 500 });
+    console.error('Form update error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to update form',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}
+
+// Add DELETE endpoint
+export async function DELETE(request: NextRequest) {
+  try {
+    await dbConnect();
+    
+    const { searchParams } = new URL(request.url);
+    const formId = searchParams.get('id');
+
+    if (!formId) {
+      return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
+    }
+
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(formId)) {
+      return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
+    }
+
+    const form = await Form.findByIdAndDelete(formId);
+
+    if (!form) {
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Form deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Form deletion error:', error);
+    return NextResponse.json({ 
+      error: 'Failed to delete form',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
