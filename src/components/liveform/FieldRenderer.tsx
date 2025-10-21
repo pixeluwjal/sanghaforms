@@ -1,5 +1,6 @@
 import { SanghaHierarchyField } from '@/components/SanghaHierarchyField';
 import { FieldRendererProps } from './types';
+import { useEffect } from 'react';
 
 export default function FieldRenderer({
   field,
@@ -23,6 +24,7 @@ export default function FieldRenderer({
   console.log(`Rendering field: ${fieldId}`, { 
     type: field.type, 
     label: field.label, 
+    defaultValue: field.defaultValue,
     hasNestedFields: field.nestedFields?.length,
     nestedFields: field.nestedFields?.map(f => ({ id: f.id, label: f.label, visible: visibleFields.has(f.id) }))
   });
@@ -35,6 +37,16 @@ export default function FieldRenderer({
   const inputBaseClass = `w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all duration-200 bg-white text-gray-900 shadow-sm placeholder-gray-400 hover:border-orange-300 ${
     errors[fieldId] ? 'border-red-500 focus:border-red-500' : ''
   }`;
+
+  // Set default value for readonly_text fields when component mounts
+  useEffect(() => {
+    if (field.type === 'readonly_text' && field.defaultValue) {
+      console.log(`Setting default value for ${fieldId}: ${field.defaultValue}`);
+      setValue(fieldId, field.defaultValue);
+      // Also call handleFieldChange to ensure it's in the form state
+      handleFieldChange(fieldId, field.defaultValue);
+    }
+  }, [fieldId, field.type, field.defaultValue, setValue, handleFieldChange]);
 
   const renderNestedFields = (nestedFields?: any[]) => {
     if (!nestedFields || nestedFields.length === 0) {
@@ -159,6 +171,71 @@ export default function FieldRenderer({
         </label>
         {errors[fieldId] && (
           <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+        )}
+        {renderNestedFields(field.nestedFields)}
+      </div>
+    );
+  }
+
+  // Handle readonly_text field type
+  if (field.type === 'readonly_text') {
+    return (
+      <div key={fieldId} className={fieldWrapperClass}>
+        <label htmlFor={fieldId} className={labelClass}>
+          {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
+        </label>
+        <input
+          type="text"
+          id={fieldId}
+          {...register(fieldId, { 
+            required: field.required && `${field.label} is required`
+          })}
+          defaultValue={field.defaultValue || ''}
+          className={`${inputBaseClass} bg-gray-100 cursor-not-allowed opacity-80`}
+          readOnly
+          disabled
+        />
+        {errors[fieldId] && (
+          <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+        )}
+        {renderNestedFields(field.nestedFields)}
+      </div>
+    );
+  }
+
+  // Handle source field type
+  if (field.type === 'source') {
+    return (
+      <div key={fieldId} className={fieldWrapperClass}>
+        <label htmlFor={fieldId} className={labelClass}>
+          {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
+        </label>
+        <div className="relative">
+          <select
+            id={fieldId}
+            {...register(fieldId, { 
+              required: field.required && `${field.label} is required` 
+            })}
+            className={`${inputBaseClass} appearance-none bg-white pr-12 cursor-pointer hover:border-orange-400 transition-colors`}
+            onChange={(e) => {
+              handleFieldChange(fieldId, e.target.value);
+            }}
+          >
+            <option value="">Select source</option>
+            {field.options?.map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+            </svg>
+          </div>
+        </div>
+        {errors[fieldId] && (
+          <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
         )}
         {renderNestedFields(field.nestedFields)}
       </div>

@@ -36,16 +36,32 @@ const FieldSchema = new mongoose.Schema({
   id: String,
   type: {
     type: String,
-    enum: ['text', 'email', 'number', 'textarea', 'select', 'radio', 'checkbox', 'date', 'sangha', 'file', 'whatsapp_optin', 'arratai_optin']
+    enum: [
+      'text', 
+      'email', 
+      'number', 
+      'textarea', 
+      'select', 
+      'radio', 
+      'checkbox', 
+      'date', 
+      'sangha', 
+      'file', 
+      'whatsapp_optin', 
+      'arratai_optin',
+      'readonly_text', // ADD THIS
+      'source' // ADD THIS
+    ]
   },
   label: String,
   placeholder: String,
   required: Boolean,
   options: [String],
+  defaultValue: String, // ADD THIS for readonly_text field
   order: Number,
   conditionalRules: [FieldConditionalRuleSchema],
   nestedFields: [{
-    type: mongoose.Schema.Types.Mixed, // Recursive reference to FieldSchema
+    type: mongoose.Schema.Types.Mixed,
     default: []
   }]
 });

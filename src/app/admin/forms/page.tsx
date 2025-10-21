@@ -59,32 +59,25 @@ export default function FormsPage() {
   };
 
   const fetchForms = async () => {
-    console.log('🔄 STARTING TO FETCH FORMS...');
     setLoading(true);
     setError('');
     
     try {
       const response = await fetch('/api/admin/forms');
-      console.log('📡 API Response status:', response.status);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('📦 API Data received:', data);
       
       if (data.success) {
-        console.log(`✅ Found ${data.forms?.length || 0} forms`);
         setForms(data.forms || []);
       } else {
         throw new Error(data.error || 'Unknown error');
       }
       
     } catch (error: any) {
-      console.error('❌ Error fetching forms:', error);
       setError(error.message || 'Failed to load forms');
     } finally {
       setLoading(false);
@@ -113,7 +106,6 @@ export default function FormsPage() {
         showToast('Failed to delete form', 'error');
       }
     } catch (error) {
-      console.error('Error deleting form:', error);
       showToast('Error deleting form', 'error');
     }
   };
@@ -125,8 +117,37 @@ export default function FormsPage() {
     setActiveMenu(null);
   };
 
-  const toggleMenu = (formId: string) => {
+  const toggleMenu = (formId: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
     setActiveMenu(activeMenu === formId ? null : formId);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveMenu(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  // Safe status formatter
+  const formatStatus = (status: string | undefined) => {
+    if (!status) return 'Draft';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  // Safe status color
+  const getStatusColor = (status: string | undefined) => {
+    if (status === 'published') {
+      return 'bg-green-100 text-green-700 shadow-sm';
+    }
+    return 'bg-amber-100 text-amber-700 shadow-sm';
   };
 
   const filteredForms = forms.filter(form =>
@@ -168,10 +189,10 @@ export default function FormsPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-3">
             <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              Your Forms
+              All Forms
             </h1>
             <p className="text-gray-700 text-lg max-w-2xl">
-              Create, manage, and analyze all your forms in one beautiful workspace
+              Manage and analyze all forms in one centralized workspace
             </p>
           </div>
           
@@ -251,7 +272,7 @@ export default function FormsPage() {
               <div className="flex items-start justify-between space-x-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-gray-900 text-xl mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors">
-                    {form.title}
+                    {form.title || 'Untitled Form'}
                   </h3>
                   <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
                     {form.description || 'No description provided'}
@@ -260,7 +281,7 @@ export default function FormsPage() {
                 
                 <div className="relative">
                   <button 
-                    onClick={() => toggleMenu(form._id)}
+                    onClick={(e) => toggleMenu(form._id, e)}
                     className="p-2 hover:bg-gray-50 rounded-xl transition-colors"
                   >
                     <MoreVertical className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
@@ -268,7 +289,10 @@ export default function FormsPage() {
 
                   {/* Dropdown Menu */}
                   {activeMenu === form._id && (
-                    <div className="absolute right-0 top-10 z-10 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 animate-dropdown">
+                    <div 
+                      className="absolute right-0 top-10 z-10 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 animate-dropdown"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => copyFormLink(form)}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
@@ -277,7 +301,7 @@ export default function FormsPage() {
                         Copy Form Link
                       </button>
                       <Link
-                        href={`/forms/${form.settings.customSlug || form._id}`}
+                        href={`/forms/${form.settings?.customSlug || form._id}`}
                         target="_blank"
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
                         onClick={() => setActiveMenu(null)}
@@ -308,11 +332,9 @@ export default function FormsPage() {
               {/* Status and Metrics */}
               <div className="flex items-center justify-between">
                 <span className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300 ${
-                  form.status === 'published' 
-                    ? 'bg-green-100 text-green-700 shadow-sm' 
-                    : 'bg-amber-100 text-amber-700 shadow-sm'
+                  getStatusColor(form.status)
                 }`}>
-                  {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+                  {formatStatus(form.status)}
                 </span>
                 
                 <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -332,7 +354,7 @@ export default function FormsPage() {
                 
                 <div className="flex items-center gap-1">
                   <Link
-                    href={`/forms/${form.settings.customSlug || form._id}`}
+                    href={`/forms/${form.settings?.customSlug || form._id}`}
                     target="_blank"
                     className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all duration-300"
                     title="Preview Form"
@@ -383,12 +405,6 @@ export default function FormsPage() {
           </div>
         )}
       </div>
-
-      {/* Close dropdown when clicking outside */}
-      <div 
-        className={`fixed inset-0 z-0 ${activeMenu ? 'block' : 'hidden'}`}
-        onClick={() => setActiveMenu(null)}
-      />
 
       {/* Add custom styles for animations */}
       <style jsx global>{`

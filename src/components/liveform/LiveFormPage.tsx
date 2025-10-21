@@ -26,6 +26,34 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     trigger
   } = useForm();
 
+  // Function to set default values for all fields
+  const setDefaultValues = useCallback((data: FormData) => {
+    if (!data.sections) return;
+    
+    // Recursive function to set default values for fields and nested fields
+    const setFieldDefaults = (fields: any[]) => {
+      fields.forEach((field: any) => {
+        // Set default value if it exists
+        if (field.defaultValue) {
+          console.log(`Setting default value for ${field.id}: ${field.defaultValue}`);
+          setValue(field.id, field.defaultValue);
+        }
+        
+        // Process nested fields recursively
+        if (field.nestedFields && field.nestedFields.length > 0) {
+          setFieldDefaults(field.nestedFields);
+        }
+      });
+    };
+
+    // Set defaults for all sections and fields
+    data.sections.forEach((section: FormSectionType) => {
+      if (section.fields && section.fields.length > 0) {
+        setFieldDefaults(section.fields);
+      }
+    });
+  }, [setValue]);
+
   // Fetch form data
   useEffect(() => {
     const fetchForm = async () => {
@@ -36,6 +64,9 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         const data = await response.json();
         console.log('Fetched form data:', data);
         setFormData(data);
+        
+        // Set default values after form data is loaded
+        setDefaultValues(data);
         
         const initialSections = new Set(data.sections?.map((section: FormSectionType) => section.id) || []);
         const initialFields = new Set();
@@ -60,7 +91,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     };
 
     fetchForm();
-  }, [slug]);
+  }, [slug, setDefaultValues]);
 
   const evaluateConditionalLogic = useCallback(() => {
   if (!formData || !formData.sections) return;
@@ -284,6 +315,38 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
       const result = await response.json();
       console.log('Submission result:', result);
+      
+      // Check if form has WhatsApp or Arratai links and redirect instead of showing success screen
+      const whatsappLink = formData?.settings?.whatsappGroupLink;
+      const arrataiLink = formData?.settings?.arrataiGroupLink;
+      
+      // Check if user opted in to WhatsApp
+      const whatsappOptin = responses.find(r => {
+        const field = formData?.sections?.flatMap(s => s.fields || [])
+          .find(f => f.id === r.fieldId && f.type === 'whatsapp_optin');
+        return field && r.value === 'true';
+      });
+      
+      // Check if user opted in to Arratai
+      const arrataiOptin = responses.find(r => {
+        const field = formData?.sections?.flatMap(s => s.fields || [])
+          .find(f => f.id === r.fieldId && f.type === 'arratai_optin');
+        return field && r.value === 'true';
+      });
+      
+      // Redirect to WhatsApp if opted in and link exists
+      if (whatsappOptin && whatsappLink) {
+        window.location.href = whatsappLink;
+        return;
+      }
+      
+      // Redirect to Arratai if opted in and link exists (and no WhatsApp redirect)
+      if (arrataiOptin && arrataiLink && !whatsappLink) {
+        window.location.href = arrataiLink;
+        return;
+      }
+      
+      // If no redirects, show success screen
       setSubmitStatus('success');
       
     } catch (error) {

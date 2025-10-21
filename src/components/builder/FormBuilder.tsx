@@ -7,6 +7,7 @@ import { FormSection } from "@/components/builder/FormSection";
 import { FieldToolbox } from "@/components/builder/FieldToolbox";
 import { ConditionalLogicPopup } from "@/components/builder/ConditionalLogicPopup";
 import { SectionConditionalPopup } from "@/components/builder/SectionConditionalPopup";
+import { AISectionGenerator } from "@/components/builder/AISectionGenerator";
 import {
   Plus,
   Image as ImageIcon,
@@ -15,6 +16,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 
 interface FormBuilderProps {
@@ -326,35 +328,67 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
   const [showImageSettings, setShowImageSettings] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
-  // Helper functions - MOVED INSIDE COMPONENT
-  const createNewField = (type: string, label?: string): Field => {
-    const fieldConfig = FIELD_TYPES.find((f) => f.type === type);
-    const defaultLabel = label || (fieldConfig ? fieldConfig.label : "Field");
+  // Helper functions
+ // In FormBuilder.tsx, update the createNewField function:
+const createNewField = (type: string, label?: string): Field => {
+  const fieldConfig = FIELD_TYPES.find((f) => f.type === type);
+  const defaultLabel = label || (fieldConfig ? fieldConfig.label : "Field");
 
-    return {
-      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type: type as any,
-      label: defaultLabel,
-      placeholder: `Enter ${defaultLabel.toLowerCase()}`,
-      required: false,
-      order: 0,
-      conditionalRules: [],
-      nestedFields: [],
-      ...(fieldConfig &&
-        fieldConfig.supportsOptions && { options: ["Option 1", "Option 2"] }),
-    };
+  const baseField = {
+    id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: type as any,
+    label: defaultLabel,
+    placeholder: `Enter ${defaultLabel.toLowerCase()}`,
+    required: false,
+    order: 0,
+    conditionalRules: [],
+    nestedFields: [],
   };
+
+  // Handle specific field types
+  if (type === 'readonly_text') {
+    return {
+      ...baseField,
+      defaultValue: 'Default Value', // Set initial default value
+    };
+  }
+
+  if (type === 'source') {
+    return {
+      ...baseField,
+      options: ["Mane Mane Samparka", "Street Samparka"], // Set initial options
+    };
+  }
+
+  // For other field types that support options
+  if (fieldConfig && fieldConfig.supportsOptions) {
+    return {
+      ...baseField,
+      options: ["Option 1", "Option 2"],
+    };
+  }
+
+  return baseField;
+};
 
   const createNewSection = (title?: string): Section => {
     return {
       id: `section-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: title || "New Section",
       description: "Section description",
-      order: form.sections.length, // Set order to the next available number
+      order: form.sections.length,
       fields: [],
       conditionalRules: [],
     };
+  };
+
+  // Add this new function for AI-generated sections
+  const handleAISectionGenerate = (generatedSection: Section) => {
+    const updatedSections = [...form.sections, generatedSection];
+    updateForm({ sections: updatedSections });
+    setCurrentSectionIndex(updatedSections.length - 1);
   };
 
   // Image handlers
@@ -442,7 +476,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
     const newSection = createNewSection();
     const updatedSections = [...form.sections, newSection];
     updateForm({ sections: updatedSections });
-    // Switch to the new section
     setCurrentSectionIndex(updatedSections.length - 1);
   };
 
@@ -463,13 +496,12 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
     );
     updateForm({ sections: updatedSections });
     
-    // Adjust current section index if needed
     if (currentSectionIndex >= updatedSections.length) {
       setCurrentSectionIndex(updatedSections.length - 1);
     }
   };
 
-  // Section reordering functions - UPDATED to update order property
+  // Section reordering functions
   const moveSectionUp = (sectionId: string) => {
     const currentIndex = form.sections.findIndex((s) => s.id === sectionId);
     if (currentIndex > 0) {
@@ -477,7 +509,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       const [section] = newSections.splice(currentIndex, 1);
       newSections.splice(currentIndex - 1, 0, section);
       
-      // Update order property for all sections
       const sectionsWithUpdatedOrder = newSections.map((section, index) => ({
         ...section,
         order: index
@@ -485,7 +516,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       
       updateForm({ sections: sectionsWithUpdatedOrder });
       
-      // Update current section index if needed
       if (currentSectionIndex === currentIndex) {
         setCurrentSectionIndex(currentIndex - 1);
       } else if (currentSectionIndex === currentIndex - 1) {
@@ -501,7 +531,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       const [section] = newSections.splice(currentIndex, 1);
       newSections.splice(currentIndex + 1, 0, section);
       
-      // Update order property for all sections
       const sectionsWithUpdatedOrder = newSections.map((section, index) => ({
         ...section,
         order: index
@@ -509,7 +538,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       
       updateForm({ sections: sectionsWithUpdatedOrder });
       
-      // Update current section index if needed
       if (currentSectionIndex === currentIndex) {
         setCurrentSectionIndex(currentIndex + 1);
       } else if (currentSectionIndex === currentIndex + 1) {
@@ -527,7 +555,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       const [section] = newSections.splice(currentIndex, 1);
       newSections.splice(newIndex, 0, section);
       
-      // Update order property for all sections
       const sectionsWithUpdatedOrder = newSections.map((section, index) => ({
         ...section,
         order: index
@@ -535,7 +562,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       
       updateForm({ sections: sectionsWithUpdatedOrder });
       
-      // Update current section index
       if (currentSectionIndex === currentIndex) {
         setCurrentSectionIndex(newIndex);
       } else if (currentIndex < newIndex && currentSectionIndex <= newIndex && currentSectionIndex > currentIndex) {
@@ -546,7 +572,7 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
     }
   };
 
-  // Field reordering functions - UPDATED to update order property
+  // Field reordering functions
   const moveFieldUp = (sectionId: string, fieldId: string) => {
     const section = form.sections.find(s => s.id === sectionId);
     if (!section) return;
@@ -558,7 +584,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
           const newFields = [...s.fields];
           [newFields[fieldIndex], newFields[fieldIndex - 1]] = [newFields[fieldIndex - 1], newFields[fieldIndex]];
           
-          // Update order property for all fields
           const fieldsWithUpdatedOrder = newFields.map((field, index) => ({
             ...field,
             order: index
@@ -583,7 +608,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
           const newFields = [...s.fields];
           [newFields[fieldIndex], newFields[fieldIndex + 1]] = [newFields[fieldIndex + 1], newFields[fieldIndex]];
           
-          // Update order property for all fields
           const fieldsWithUpdatedOrder = newFields.map((field, index) => ({
             ...field,
             order: index
@@ -613,11 +637,9 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       updateForm({ sections: [newSection] });
       setCurrentSectionIndex(0);
     } else {
-      // Add to the current section
       const currentSection = form.sections[currentSectionIndex];
       addFieldToSection(currentSection.id, fieldType);
     }
-    // Close mobile sidebar after adding field
     setMobileSidebarOpen(false);
   };
 
@@ -743,7 +765,7 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
 
           {/* Main Builder Area - Right */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Section Navigation Header */}
+            {/* Section Navigation Header - Updated with AI Button */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div>
@@ -755,8 +777,16 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                   </p>
                 </div>
                 
-                {/* Section Navigation Controls */}
                 <div className="flex items-center gap-4">
+                  {/* AI Generate Button */}
+                  <button
+                    onClick={() => setShowAIGenerator(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold hover:scale-105"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="hidden sm:inline">AI Generate</span>
+                  </button>
+
                   {/* Section Counter */}
                   <div className="text-sm text-gray-600 font-medium">
                     Section {currentSectionIndex + 1} of {form.sections.length}
@@ -838,12 +868,21 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                   <p className="text-gray-600 mb-6">
                     Start building your form by adding your first section.
                   </p>
-                  <button
-                    onClick={addSection}
-                    className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                  >
-                    Create First Section
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={addSection}
+                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                      Create First Section
+                    </button>
+                    <button
+                      onClick={() => setShowAIGenerator(true)}
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      AI Generate
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -892,6 +931,15 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
             setEditingSection(null);
           }}
           onClose={() => setEditingSection(null)}
+        />
+      )}
+
+      {/* AI Section Generator Popup */}
+      {showAIGenerator && (
+        <AISectionGenerator
+          onSectionGenerate={handleAISectionGenerate}
+          currentSections={form.sections}
+          onClose={() => setShowAIGenerator(false)}
         />
       )}
     </div>

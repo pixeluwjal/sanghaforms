@@ -89,6 +89,20 @@ const FIELD_TYPES = [
     icon: Users, 
     color: 'sky', 
     description: 'Arratai platform opt-in' 
+  },
+   { 
+    type: 'readonly_text', 
+    label: 'Read-only Text', 
+    icon: Type, 
+    color: 'gray', 
+    description: 'Text field with fixed value' 
+  },
+  { 
+    type: 'source',  // Changed from samparka_type to source
+    label: 'Source', // Changed label to Source
+    icon: Users, 
+    color: 'indigo', 
+    description: 'Source selection' // Updated description
   }
 ];
 
@@ -103,7 +117,8 @@ const colorConfig = {
   teal: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-600', hover: 'hover:bg-teal-100' },
   amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', hover: 'hover:bg-amber-100' },
   emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600', hover: 'hover:bg-emerald-100' },
-  sky: { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-600', hover: 'hover:bg-sky-100' }
+  sky: { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-600', hover: 'hover:bg-sky-100' },
+  gray: { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-600', hover: 'hover:bg-gray-100' } // Added gray
 };
 
 export const FieldToolbox = ({ onFieldAdd }: FieldToolboxProps) => {

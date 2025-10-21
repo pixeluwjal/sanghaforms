@@ -14,32 +14,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = await verifyToken(token);
-    
-    // Get all forms created by this admin
-    let formQuery: any = {};
-    if (decoded.role !== 'super_admin') {
-      formQuery.createdBy = decoded.adminId;
-    }
+    // Just verify the token - any authenticated admin can see all responses
+    await verifyToken(token);
 
-    const adminForms = await Form.find(formQuery).select('_id title sections settings').lean();
-    const adminFormIds = adminForms.map(form => form._id.toString());
+    // Get ALL forms (no filtering by admin)
+    const allForms = await Form.find({}).select('_id title sections settings').lean();
+    const allFormIds = allForms.map(form => form._id.toString());
 
-    console.log(`📋 Admin has ${adminForms.length} forms`);
+    console.log(`📋 Found ${allForms.length} total forms`);
 
-    // Get responses only for admin's forms
+    // Get responses for ALL forms
     const responses = await FormResponse.find({
-      formId: { $in: adminFormIds }
+      formId: { $in: allFormIds }
     })
     .sort({ submittedAt: -1 })
     .limit(1000)
     .lean();
 
-    console.log(`📦 Found ${responses.length} responses`);
+    console.log(`📦 Found ${responses.length} responses from all forms`);
 
     // Create a field map for each form to get proper labels
     const formFieldMaps = new Map();
-    adminForms.forEach(form => {
+    allForms.forEach(form => {
       const fieldMap = new Map();
       form.sections?.forEach(section => {
         section.fields?.forEach(field => {
@@ -73,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Transform responses to include proper field labels and organize data
     const transformedResponses = responses.map(response => {
-      const form = adminForms.find(f => f._id.toString() === response.formId.toString());
+      const form = allForms.find(f => f._id.toString() === response.formId.toString());
       const fieldMap = formFieldMaps.get(response.formId.toString()) || new Map();
       
       // Group responses by field and handle Sangha hierarchy
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       success: true,
       responses: transformedResponses,
-      forms: adminForms.map(form => ({
+      forms: allForms.map(form => ({
         _id: form._id,
         title: form.title,
         sections: form.sections

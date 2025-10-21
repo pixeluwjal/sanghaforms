@@ -51,6 +51,7 @@ export async function GET(
         placeholder: field.placeholder,
         required: field.required,
         options: field.options || [],
+        defaultValue: field.defaultValue || '', // ADD THIS LINE
         order: field.order,
         conditionalRules: field.conditionalRules || [],
         nestedFields: (field.nestedFields || []).map(transformField)
@@ -92,6 +93,8 @@ export async function GET(
       createdAt: form.createdAt,
       updatedAt: form.updatedAt
     };
+
+    console.log('Transformed form with defaultValue:', JSON.stringify(transformedForm, null, 2));
 
     return NextResponse.json(transformedForm);
   } catch (error) {

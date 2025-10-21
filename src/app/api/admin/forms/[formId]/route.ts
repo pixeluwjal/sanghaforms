@@ -7,7 +7,7 @@ import FormResponse from '@/models/FormResponse';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
     await dbConnect();
@@ -17,20 +17,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const decoded = await verifyToken(token);
-    const { formId } = params;
+    // Just verify the token - any authenticated admin can delete
+    await verifyToken(token);
+    const { formId } = await params;
 
-    // Check if form exists and user has permission
+    // Check if form exists
     const form = await Form.findById(formId);
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    if (decoded.role !== 'super_admin' && form.createdBy.toString() !== decoded.adminId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    // Delete form and its responses
+    // Delete form and its responses (no ownership check)
     await Form.findByIdAndDelete(formId);
     await FormResponse.deleteMany({ formId });
 

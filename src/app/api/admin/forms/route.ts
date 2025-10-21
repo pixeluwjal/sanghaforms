@@ -18,23 +18,15 @@ export async function GET(request: NextRequest) {
     const decoded = await verifyToken(token);
     console.log('👤 Admin making request:', decoded);
 
-    // Build query based on role
-    const query: any = {};
-    
-    if (decoded.role !== 'super_admin') {
-      // For regular admins, only show forms they created
-      query.createdBy = decoded.adminId;
-    }
-    // For super_admin, no filter - show all forms
+    // REMOVED the role-based filtering - fetch ALL forms
+    console.log('📋 Fetching ALL forms (no filters applied)');
 
-    console.log('📋 Query being used:', query);
-
-    const forms = await Form.find(query)
+    const forms = await Form.find({}) // Empty query to get all forms
       .select('-sections -theme')
       .sort({ createdAt: -1 })
       .lean();
 
-    console.log(`📦 Found ${forms.length} forms for admin ${decoded.adminId} (role: ${decoded.role})`);
+    console.log(`📦 Found ${forms.length} forms total`);
 
     return NextResponse.json({ 
       success: true,

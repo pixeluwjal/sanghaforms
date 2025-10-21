@@ -56,6 +56,18 @@ const FIELD_TYPES = [
     icon: MessageCircle,
     color: "emerald",
   },
+  { 
+    type: 'readonly_text', 
+    label: 'Read-only Text', 
+    icon: Type, 
+    color: 'gray', 
+  },
+  { 
+    type: 'source',
+    label: 'Source',
+    icon: Users, 
+    color: 'indigo', 
+  },
   { type: "arratai_optin", label: "Arratai Opt-in", icon: Users, color: "sky" },
 ];
 
@@ -125,6 +137,12 @@ const colorConfig = {
     border: "border-sky-200",
     text: "text-sky-600",
     badge: "bg-sky-500",
+  },
+  gray: {
+    bg: "bg-gray-50",
+    border: "border-gray-200",
+    text: "text-gray-600",
+    badge: "bg-gray-500",
   },
 };
 
@@ -326,7 +344,121 @@ export const FormField = ({
       {/* Field Configuration */}
       {isExpanded && (
         <div className="p-4 sm:p-5 bg-gradient-to-br from-gray-50/50 to-white/30 border-b border-gray-200/50">
-          {/* Placeholder for input fields */}
+          {/* Read-only Text Field Configuration */}
+          {field.type === "readonly_text" && (
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                Default Value
+              </label>
+              <input
+                type="text"
+                value={field.defaultValue || ""}
+                onChange={(e) =>
+                  onUpdate(field.id, { defaultValue: e.target.value })
+                }
+                className="w-full border-2 border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-lg"
+                placeholder="Enter default value"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This value will be fixed and users cannot change it
+              </p>
+            </div>
+          )}
+
+          {/* Source Dropdown Configuration */}
+          {field.type === "source" && (
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                Source Options
+              </label>
+              <div className="space-y-2 sm:space-y-3">
+                {field.options &&
+                  field.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-indigo-500 flex-shrink-0"></div>
+                      <input
+                        type="text"
+                        value={option}
+                        onChange={(e) => {
+                          const newOptions = [...(field.options || [])];
+                          newOptions[index] = e.target.value;
+                          onUpdate(field.id, { options: newOptions });
+                        }}
+                        className="flex-1 border-2 border-gray-300 rounded-xl px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        placeholder={`Option ${index + 1}`}
+                      />
+                      <button
+                        onClick={() => {
+                          const newOptions = field.options
+                            ? field.options.filter((_, i) => i !== index)
+                            : [];
+                          onUpdate(field.id, { options: newOptions });
+                        }}
+                        className="p-1 sm:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+                  ))}
+                
+                {/* Predefined Source Options */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <label className="block text-sm font-semibold text-blue-700 mb-2">
+                    Predefined Sources
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      "Mane Mane Samparka",
+                      "Street Samparka", 
+                      "BJP Karyakartha",
+                      "Bala Bharathi Parent",
+                      "Kishora Bharathi Parent",
+                      "Maithreyi Parent",
+                      "Mithra Parent",
+                      "Sevika Samithi Spouse",
+                      "Relocation from another Milan",
+                      "Sangha Utsav",
+                      "Join RSS Website", 
+                      "Join RSS Campaign",
+                      "Friend Circle",
+                      "Relation Circle",
+                      "Yuva Conclave",
+                      "Yuva Samavesha",
+                      "Existing Pattlist SS"
+                    ].map((source) => (
+                      <button
+                        key={source}
+                        type="button"
+                        onClick={() => {
+                          const newOptions = [...(field.options || []), source];
+                          onUpdate(field.id, { options: newOptions });
+                        }}
+                        className="text-left p-2 text-xs bg-white border border-blue-200 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        {source}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const newOptions = [
+                      ...(field.options || []),
+                      `Option ${(field.options ? field.options.length : 0) + 1}`,
+                    ];
+                    onUpdate(field.id, { options: newOptions });
+                  }}
+                  className="flex items-center gap-2 text-xs sm:text-sm text-purple-600 hover:text-purple-700 font-semibold mt-3"
+                >
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Add Custom Option
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Placeholder for other input fields */}
           {(field.type === "text" ||
             field.type === "email" ||
             field.type === "number" ||
