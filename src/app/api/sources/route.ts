@@ -22,13 +22,11 @@ const SOURCES = [
 
 export async function GET(request: NextRequest) {
   try {
-    return NextResponse.json({
-      success: true,
-      sources: SOURCES
-    });
+    // Return JUST the array, not wrapped in an object
+    return NextResponse.json(SOURCES);
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch sources' },
+      { error: 'Failed to fetch sources' },
       { status: 500 }
     );
   }
