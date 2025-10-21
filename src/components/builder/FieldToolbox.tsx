@@ -1,3 +1,4 @@
+// components/builder/FieldToolbox.tsx
 import { Settings, Plus, Type, Mail, Hash, FileText, List, Circle, Square, Calendar, Upload, MessageCircle, Users } from 'lucide-react';
 
 interface FieldToolboxProps {
@@ -68,7 +69,6 @@ const FIELD_TYPES = [
     color: 'amber', 
     description: 'File upload field' 
   },
-  // ADDED SANGHA FIELD
   { 
     type: 'sangha', 
     label: 'Sangha Hierarchy', 
@@ -108,18 +108,18 @@ const colorConfig = {
 
 export const FieldToolbox = ({ onFieldAdd }: FieldToolboxProps) => {
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-6 h-fit sticky top-6">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-white mb-3">
-          <Settings className="w-5 h-5" />
-          <h3 className="font-bold text-lg">Form Fields</h3>
+    <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl p-4 sm:p-6 h-fit lg:sticky lg:top-6 max-h-[calc(100vh-2rem)] overflow-y-auto">
+      <div className="text-center mb-4 sm:mb-6">
+        <div className="inline-flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-white mb-2 sm:mb-3">
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+          <h3 className="font-bold text-sm sm:text-lg">Form Fields</h3>
         </div>
-        <p className="text-gray-600 text-sm">
+        <p className="text-gray-600 text-xs sm:text-sm">
           Click to add fields to your form
         </p>
       </div>
       
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-3">
         {FIELD_TYPES.map((fieldType) => {
           const IconComponent = fieldType.icon;
           const color = colorConfig[fieldType.color as keyof typeof colorConfig] || colorConfig.blue;
@@ -128,30 +128,30 @@ export const FieldToolbox = ({ onFieldAdd }: FieldToolboxProps) => {
             <button
               key={fieldType.type}
               onClick={() => onFieldAdd(fieldType.type)}
-              className={`w-full flex items-center gap-4 p-4 ${color.bg} ${color.border} border-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group text-left`}
+              className={`w-full flex items-center gap-2 sm:gap-4 p-3 sm:p-4 ${color.bg} ${color.border} border-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg group text-left`}
             >
-              <div className={`w-12 h-12 rounded-xl ${color.bg} border-2 ${color.border} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner`}>
-                <IconComponent className={`w-6 h-6 ${color.text}`} />
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-xl ${color.bg} border-2 ${color.border} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner flex-shrink-0`}>
+                <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${color.text}`} />
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-gray-800 text-sm truncate">
-                  {fieldType.label} {/* FIXED: Changed fieldLabel to fieldType.label */}
+                <div className="font-semibold text-gray-800 text-xs sm:text-sm truncate">
+                  {fieldType.label}
                 </div>
-                <div className="text-gray-500 text-xs truncate">
+                <div className="text-gray-500 text-xs truncate hidden sm:block">
                   {fieldType.description}
                 </div>
               </div>
               
-              <Plus className={`w-5 h-5 ${color.text} opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:rotate-90`} />
+              <Plus className={`w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 ${color.text} opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:rotate-90 flex-shrink-0`} />
             </button>
           );
         })}
       </div>
 
       {/* Quick Tips */}
-      <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
-        <h4 className="font-semibold text-purple-800 text-sm mb-2">💡 Quick Tips</h4>
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+        <h4 className="font-semibold text-purple-800 text-xs sm:text-sm mb-2">💡 Quick Tips</h4>
         <ul className="text-xs text-purple-600 space-y-1">
           <li>• Click any field to add it</li>
           <li>• Use nested fields for conditional logic</li>

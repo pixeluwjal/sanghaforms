@@ -1,3 +1,4 @@
+// components/builder/FormField.tsx
 import { useState } from "react";
 import {
   Trash2,
@@ -190,19 +191,19 @@ export const FormField = ({
       onDrop={handleDrop}
     >
       {/* Field Header */}
-      <div className="p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
+      <div className="p-4 sm:p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200/50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             {/* Drag Handle */}
             {isDraggable && (
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
                 <button
                   className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-all duration-200 cursor-grab active:cursor-grabbing"
                   draggable
                   onDragStart={handleDragStart}
                   title="Drag to reorder"
                 >
-                  <GripVertical className="w-4 h-4" />
+                  <GripVertical className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
                 
                 {/* Move Up/Down Buttons */}
@@ -213,7 +214,7 @@ export const FormField = ({
                       className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-all duration-200"
                       title="Move up"
                     >
-                      <ArrowUp className="w-3 h-3" />
+                      <ArrowUp className="w-2 h-2 sm:w-3 sm:h-3" />
                     </button>
                   )}
                   
@@ -223,7 +224,7 @@ export const FormField = ({
                       className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all duration-200"
                       title="Move down"
                     >
-                      <ArrowDown className="w-3 h-3" />
+                      <ArrowDown className="w-2 h-2 sm:w-3 sm:h-3" />
                     </button>
                   )}
                 </div>
@@ -232,41 +233,41 @@ export const FormField = ({
 
             {/* Field Type Badge */}
             <div
-              className={`flex items-center gap-3 px-4 py-2 rounded-xl ${color.bg} ${color.border} border-2`}
+              className={`flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-xl ${color.bg} ${color.border} border-2 flex-shrink-0`}
             >
-              <IconComponent className={`w-5 h-5 ${color.text}`} />
-              <span className="font-semibold text-gray-700 capitalize text-sm">
+              <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${color.text}`} />
+              <span className="font-semibold text-gray-700 capitalize text-xs sm:text-sm hidden xs:inline">
                 {field.type}
               </span>
             </div>
 
             {/* Field Label Input */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <input
                 type="text"
                 value={field.label}
                 onChange={(e) => onUpdate(field.id, { label: e.target.value })}
-                className="w-full bg-transparent border-none text-xl font-bold text-gray-800 focus:outline-none focus:ring-0 placeholder-gray-400"
+                className="w-full bg-transparent border-none text-base sm:text-xl font-bold text-gray-800 focus:outline-none focus:ring-0 placeholder-gray-400 truncate"
                 placeholder="Field label"
               />
             </div>
 
             {/* Field Position Indicator */}
             {isDraggable && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full font-medium">
+              <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium flex-shrink-0">
                 <span>#{fieldIndex + 1}</span>
               </div>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all duration-300 hover:scale-110"
+              className="p-2 sm:p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all duration-300 hover:scale-110"
             >
               <ChevronDown
-                className={`w-4 h-4 text-gray-600 transition-transform ${
+                className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-600 transition-transform ${
                   isExpanded ? "rotate-180" : ""
                 }`}
               />
@@ -274,39 +275,39 @@ export const FormField = ({
 
             <button
               onClick={() => onEditConditional(field)}
-              className="p-3 bg-blue-50 hover:bg-blue-100 rounded-xl text-blue-600 hover:text-blue-700 transition-all duration-300 hover:scale-110"
+              className="p-2 sm:p-3 bg-blue-50 hover:bg-blue-100 rounded-xl text-blue-600 hover:text-blue-700 transition-all duration-300 hover:scale-110"
               title="Conditional Logic"
             >
-              <Eye className="w-4 h-4" />
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
 
             <button
               onClick={() => onDelete(field.id)}
-              className="p-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-600 hover:text-red-700 transition-all duration-300 hover:scale-110"
+              className="p-2 sm:p-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-600 hover:text-red-700 transition-all duration-300 hover:scale-110"
               title="Delete Field"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
         {/* Required Toggle and Status */}
-        <div className="flex items-center gap-3 mt-4">
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4 flex-wrap">
+          <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700">
             <input
               type="checkbox"
               checked={field.required}
               onChange={(e) =>
                 onUpdate(field.id, { required: e.target.checked })
               }
-              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 scale-125"
+              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 scale-110 sm:scale-125"
             />
-            Required Field
+            Required
           </label>
 
           {field.conditionalRules && field.conditionalRules.length > 0 && (
-            <div className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-              <Eye className="w-3 h-3" />
+            <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+              <Eye className="w-2 h-2 sm:w-3 sm:h-3" />
               {field.conditionalRules.length} rule
               {field.conditionalRules.length !== 1 ? "s" : ""}
             </div>
@@ -314,8 +315,8 @@ export const FormField = ({
 
           {/* Drag Hint */}
           {isDraggable && (
-            <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-              <GripVertical className="w-3 h-3" />
+            <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+              <GripVertical className="w-2 h-2 sm:w-3 sm:h-3" />
               Drag to reorder
             </div>
           )}
@@ -324,15 +325,15 @@ export const FormField = ({
 
       {/* Field Configuration */}
       {isExpanded && (
-        <div className="p-5 bg-gradient-to-br from-gray-50/50 to-white/30 border-b border-gray-200/50">
+        <div className="p-4 sm:p-5 bg-gradient-to-br from-gray-50/50 to-white/30 border-b border-gray-200/50">
           {/* Placeholder for input fields */}
           {(field.type === "text" ||
             field.type === "email" ||
             field.type === "number" ||
             field.type === "textarea" ||
             field.type === "select") && (
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
                 Placeholder Text
               </label>
               <input
@@ -341,7 +342,7 @@ export const FormField = ({
                 onChange={(e) =>
                   onUpdate(field.id, { placeholder: e.target.value })
                 }
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg"
+                className="w-full border-2 border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-lg"
                 placeholder="Enter placeholder text"
               />
             </div>
@@ -351,16 +352,16 @@ export const FormField = ({
           {(field.type === "radio" ||
             field.type === "checkbox" ||
             field.type === "select") && (
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <div className="mb-4 sm:mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
                 Options
               </label>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {field.options &&
                   field.options.map((option, index) => (
-                    <div key={index} className="flex items-center gap-3">
+                    <div key={index} className="flex items-center gap-2 sm:gap-3">
                       <div
-                        className={`w-3 h-3 rounded-full ${color.badge}`}
+                        className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${color.badge} flex-shrink-0`}
                       ></div>
                       <input
                         type="text"
@@ -370,7 +371,7 @@ export const FormField = ({
                           newOptions[index] = e.target.value;
                           onUpdate(field.id, { options: newOptions });
                         }}
-                        className="flex-1 border-2 border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="flex-1 border-2 border-gray-300 rounded-xl px-3 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                         placeholder={`Option ${index + 1}`}
                       />
                       <button
@@ -380,9 +381,9 @@ export const FormField = ({
                             : [];
                           onUpdate(field.id, { options: newOptions });
                         }}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1 sm:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   ))}
@@ -396,9 +397,9 @@ export const FormField = ({
                     ];
                     onUpdate(field.id, { options: newOptions });
                   }}
-                  className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                  className="flex items-center gap-2 text-xs sm:text-sm text-purple-600 hover:text-purple-700 font-semibold"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                   Add Option
                 </button>
               </div>
@@ -406,11 +407,11 @@ export const FormField = ({
           )}
 
           {/* Add Nested Field */}
-          <div className="mt-6 pt-6 border-t border-gray-300/50">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-300/50">
+            <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
               Add Nested Field (Conditional)
             </label>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -418,10 +419,10 @@ export const FormField = ({
                     e.target.value = "";
                   }
                 }}
-                className="flex-1 border-2 border-gray-300 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="flex-1 border-2 border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="">
-                  Select field type to add nested field...
+                  Select field type...
                 </option>
                 {FIELD_TYPES.map((fieldType) => (
                   <option key={fieldType.type} value={fieldType.type}>
@@ -439,12 +440,12 @@ export const FormField = ({
 
       {/* Nested Fields */}
       {field.nestedFields && field.nestedFields.length > 0 && (
-        <div className="p-5 bg-gradient-to-br from-purple-50/30 to-blue-50/30 border-t border-purple-200/50">
-          <h4 className="text-sm font-semibold text-purple-800 mb-4 flex items-center gap-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+        <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50/30 to-blue-50/30 border-t border-purple-200/50">
+          <h4 className="text-xs sm:text-sm font-semibold text-purple-800 mb-3 sm:mb-4 flex items-center gap-2">
+            <div className="w-1 h-1 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
             Nested Fields (Conditional) - {field.nestedFields.length} field(s)
           </h4>
-          <div className="space-y-4 ml-6 border-l-2 border-purple-300/50 pl-6">
+          <div className="space-y-3 sm:space-y-4 ml-4 sm:ml-6 border-l-2 border-purple-300/50 pl-4 sm:pl-6">
             {field.nestedFields.map((nestedField, nestedIndex) => (
               <FormField
                 key={nestedField.id}

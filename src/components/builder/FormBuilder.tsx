@@ -12,6 +12,9 @@ import {
   Image as ImageIcon,
   X,
   Upload,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface FormBuilderProps {
@@ -321,6 +324,8 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
   const [editingField, setEditingField] = useState<Field | null>(null);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [showImageSettings, setShowImageSettings] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
   // Helper functions - MOVED INSIDE COMPONENT
   const createNewField = (type: string, label?: string): Field => {
@@ -437,6 +442,8 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
     const newSection = createNewSection();
     const updatedSections = [...form.sections, newSection];
     updateForm({ sections: updatedSections });
+    // Switch to the new section
+    setCurrentSectionIndex(updatedSections.length - 1);
   };
 
   const updateSection = (sectionId: string, updates: Partial<Section>) => {
@@ -455,6 +462,11 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       (section) => section.id !== sectionId
     );
     updateForm({ sections: updatedSections });
+    
+    // Adjust current section index if needed
+    if (currentSectionIndex >= updatedSections.length) {
+      setCurrentSectionIndex(updatedSections.length - 1);
+    }
   };
 
   // Section reordering functions - UPDATED to update order property
@@ -472,6 +484,13 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       }));
       
       updateForm({ sections: sectionsWithUpdatedOrder });
+      
+      // Update current section index if needed
+      if (currentSectionIndex === currentIndex) {
+        setCurrentSectionIndex(currentIndex - 1);
+      } else if (currentSectionIndex === currentIndex - 1) {
+        setCurrentSectionIndex(currentIndex);
+      }
     }
   };
 
@@ -489,6 +508,13 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       }));
       
       updateForm({ sections: sectionsWithUpdatedOrder });
+      
+      // Update current section index if needed
+      if (currentSectionIndex === currentIndex) {
+        setCurrentSectionIndex(currentIndex + 1);
+      } else if (currentSectionIndex === currentIndex + 1) {
+        setCurrentSectionIndex(currentIndex);
+      }
     }
   };
 
@@ -508,6 +534,15 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       }));
       
       updateForm({ sections: sectionsWithUpdatedOrder });
+      
+      // Update current section index
+      if (currentSectionIndex === currentIndex) {
+        setCurrentSectionIndex(newIndex);
+      } else if (currentIndex < newIndex && currentSectionIndex <= newIndex && currentSectionIndex > currentIndex) {
+        setCurrentSectionIndex(currentSectionIndex - 1);
+      } else if (currentIndex > newIndex && currentSectionIndex >= newIndex && currentSectionIndex < currentIndex) {
+        setCurrentSectionIndex(currentSectionIndex + 1);
+      }
     }
   };
 
@@ -576,45 +611,77 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       const newField = createNewField(fieldType);
       newSection.fields = [newField];
       updateForm({ sections: [newSection] });
+      setCurrentSectionIndex(0);
     } else {
-      // Add to the last section
-      const lastSection = form.sections[form.sections.length - 1];
-      addFieldToSection(lastSection.id, fieldType);
+      // Add to the current section
+      const currentSection = form.sections[currentSectionIndex];
+      addFieldToSection(currentSection.id, fieldType);
+    }
+    // Close mobile sidebar after adding field
+    setMobileSidebarOpen(false);
+  };
+
+  // Navigation functions
+  const goToPreviousSection = () => {
+    if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(currentSectionIndex - 1);
     }
   };
+
+  const goToNextSection = () => {
+    if (currentSectionIndex < form.sections.length - 1) {
+      setCurrentSectionIndex(currentSectionIndex + 1);
+    }
+  };
+
+  const goToSection = (index: number) => {
+    if (index >= 0 && index < form.sections.length) {
+      setCurrentSectionIndex(index);
+    }
+  };
+
+  const currentSection = form.sections[currentSectionIndex];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
       <div className="container mx-auto px-4 py-6">
+        {/* Mobile Sidebar Overlay */}
+        {mobileSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Header with Image Settings */}
         <div className="mb-8 text-center relative">
           <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
-            <div className="sm:w-1/4 flex justify-center sm:justify-start">
-              {form.images?.logo && (
-                <img
-                  src={form.images.logo}
-                  alt="Form Logo"
-                  className="w-16 h-16 object-contain rounded-lg"
-                />
-              )}
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden flex items-center">
+              <button
+                onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+                className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="flex-1 text-center">
-              <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
                 Form Builder
               </h1>
-              <p className="text-gray-600 mt-2 text-base lg:text-lg">
+              <p className="text-gray-600 mt-2 text-sm sm:text-base lg:text-lg">
                 Build your form by adding fields and sections
               </p>
             </div>
 
-            <div className="sm:w-1/4 flex justify-center sm:justify-end">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowImageSettings(!showImageSettings)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
                 <ImageIcon className="w-4 h-4" />
-                <span>Images</span>
+                <span className="hidden sm:inline">Images</span>
               </button>
             </div>
           </div>
@@ -625,14 +692,14 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
               <img
                 src={form.images.banner}
                 alt="Form Banner"
-                className="w-full h-32 lg:h-48 object-cover"
+                className="w-full h-24 sm:h-32 lg:h-48 object-cover"
               />
             </div>
           )}
 
           {/* Image Settings Panel */}
           {showImageSettings && (
-            <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4">
+            <div className="fixed sm:absolute top-1/2 left-1/2 sm:top-full sm:left-auto sm:right-0 mt-2 w-[90vw] sm:w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 transform -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-gray-800">Form Images</h3>
                 <button
@@ -664,111 +731,85 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
           {/* Toolbox Sidebar - Left */}
-          <div className="lg:col-span-1">
-            <FieldToolbox onFieldAdd={handleToolboxFieldAdd} />
+          <div className={`lg:col-span-1 ${
+            mobileSidebarOpen 
+              ? 'fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-xl transform translate-x-0 transition-transform duration-300' 
+              : 'fixed -translate-x-full lg:relative lg:translate-x-0'
+          }`}>
+            <div className="h-full overflow-y-auto">
+              <FieldToolbox onFieldAdd={handleToolboxFieldAdd} />
+            </div>
           </div>
 
           {/* Main Builder Area - Right */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Sections Navigation */}
-            {form.sections.length > 0 && (
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            {/* Section Navigation Header */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Form Sections
+                    {currentSection ? currentSection.title : "No Sections"}
                   </h3>
-                  <span className="text-sm text-gray-500">
-                    {form.sections.length} section(s)
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {form.sections.map((section, index) => (
-                    <div
-                      key={section.id}
-                      className="flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-300 bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:shadow-md"
-                    >
-                      {/* Section Position - UPDATED to show actual order */}
-                      <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">
-                        #{section.order + 1}
-                      </div>
-
-                      {/* Section Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold truncate">
-                            {section.title || `Section ${section.order + 1}`}
-                          </h4>
-                          {section.conditionalRules && section.conditionalRules.length > 0 && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
-                              {section.conditionalRules.length} rule(s)
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500 truncate">
-                          {section.fields.length} field(s)
-                        </p>
-                      </div>
-
-                      {/* Section Actions */}
-                      <div className="flex items-center gap-2">
-                        {/* Move Buttons */}
-                        <div className="flex gap-1">
-                          {section.order > 0 && (
-                            <button
-                              onClick={() => moveSectionUp(section.id)}
-                              className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Move up"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              </svg>
-                            </button>
-                          )}
-
-                          {section.order < form.sections.length - 1 && (
-                            <button
-                              onClick={() => moveSectionDown(section.id)}
-                              className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="Move down"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Position Input - UPDATED to show actual order */}
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="1"
-                            max={form.sections.length}
-                            value={section.order + 1}
-                            onChange={(e) => moveSectionToPosition(section.id, parseInt(e.target.value))}
-                            className="w-12 px-2 py-1 border border-gray-300 rounded text-sm text-center"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Reordering Hint */}
-                <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-700 text-center">
-                    💡 Use arrows and position numbers to reorder sections
+                  <p className="text-sm text-gray-500">
+                    {currentSection ? `${currentSection.fields.length} field(s)` : "Add a section to get started"}
                   </p>
                 </div>
+                
+                {/* Section Navigation Controls */}
+                <div className="flex items-center gap-4">
+                  {/* Section Counter */}
+                  <div className="text-sm text-gray-600 font-medium">
+                    Section {currentSectionIndex + 1} of {form.sections.length}
+                  </div>
+                  
+                  {/* Navigation Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={goToPreviousSection}
+                      disabled={currentSectionIndex === 0}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={goToNextSection}
+                      disabled={currentSectionIndex === form.sections.length - 1}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {/* Active Sections */}
-            {form.sections.map((section) => (
+              {/* Section Quick Navigation */}
+              {form.sections.length > 1 && (
+                <div className="mt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {form.sections.map((section, index) => (
+                      <button
+                        key={section.id}
+                        onClick={() => goToSection(index)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          index === currentSectionIndex
+                            ? 'bg-purple-600 text-white shadow-lg'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {section.title || `Section ${index + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Current Active Section */}
+            {currentSection ? (
               <FormSection
-                key={section.id}
-                section={section}
+                key={currentSection.id}
+                section={currentSection}
                 onUpdate={updateSection}
                 onDelete={deleteSection}
                 onAddField={addFieldToSection}
@@ -781,24 +822,45 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                 onSectionMoveDown={moveSectionDown}
                 onFieldMoveUp={moveFieldUp}
                 onFieldMoveDown={moveFieldDown}
-                sectionIndex={section.order}
+                sectionIndex={currentSection.order}
                 totalSections={form.sections.length}
               />
-            ))}
+            ) : (
+              /* Empty State */
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-white/20 shadow-lg text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Plus className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                    No Sections Yet
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Start building your form by adding your first section.
+                  </p>
+                  <button
+                    onClick={addSection}
+                    className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  >
+                    Create First Section
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Add Section Button */}
             <button
               onClick={addSection}
-              className="w-full flex items-center justify-center gap-4 p-6 lg:p-8 bg-white/80 backdrop-blur-sm border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-white hover:border-purple-400 hover:shadow-xl transition-all duration-300 group"
+              className="w-full flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-white hover:border-purple-400 hover:shadow-xl transition-all duration-300 group"
             >
-              <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-blue-200 transition-all duration-300 shadow-inner">
-                <Plus className="w-6 h-6 lg:w-7 lg:h-7 text-purple-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-blue-200 transition-all duration-300 shadow-inner">
+                <Plus className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-purple-600" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-lg lg:text-xl text-gray-800">
+                <div className="font-bold text-base sm:text-lg lg:text-xl text-gray-800">
                   Add New Section
                 </div>
-                <div className="text-purple-500 text-sm">
+                <div className="text-purple-500 text-xs sm:text-sm">
                   Organize your form into multiple sections
                 </div>
               </div>
