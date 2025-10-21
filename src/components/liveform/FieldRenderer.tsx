@@ -1,8 +1,9 @@
 import { SanghaHierarchyField } from '@/components/SanghaHierarchyField';
 import { FieldRendererProps } from './types';
-import { useEffect,useState } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 
-export default function FieldRenderer({
+// Memoize the component to prevent unnecessary re-renders
+const FieldRenderer = memo(function FieldRenderer({
   field,
   register,
   errors,
@@ -17,17 +18,8 @@ export default function FieldRenderer({
   const isVisible = visibleFields.has(fieldId);
   
   if (!isVisible) {
-    console.log(`Field ${fieldId} is hidden - not rendering`);
     return null;
   }
-
-  console.log(`Rendering field: ${fieldId}`, { 
-    type: field.type, 
-    label: field.label, 
-    defaultValue: field.defaultValue,
-    hasNestedFields: field.nestedFields?.length,
-    nestedFields: field.nestedFields?.map(f => ({ id: f.id, label: f.label, visible: visibleFields.has(f.id) }))
-  });
 
   const isNested = level > 0;
   const fieldWrapperClass = `mb-6 ${isNested ? 'ml-4 md:ml-6' : ''}`;
@@ -38,33 +30,24 @@ export default function FieldRenderer({
     errors[fieldId] ? 'border-red-500 focus:border-red-500' : ''
   }`;
 
-  // Set default value for readonly_text fields when component mounts
+  // Set default value for readonly_text fields when component mounts - FIXED: removed handleFieldChange from deps
   useEffect(() => {
     if (field.type === 'readonly_text' && field.defaultValue) {
-      console.log(`Setting default value for ${fieldId}: ${field.defaultValue}`);
       setValue(fieldId, field.defaultValue);
-      // Also call handleFieldChange to ensure it's in the form state
-      handleFieldChange(fieldId, field.defaultValue);
     }
-  }, [fieldId, field.type, field.defaultValue, setValue, handleFieldChange]);
+  }, [fieldId, field.type, field.defaultValue, setValue]);
 
-  const renderNestedFields = (nestedFields?: any[]) => {
+  const renderNestedFields = useCallback((nestedFields?: any[]) => {
     if (!nestedFields || nestedFields.length === 0) {
-      console.log(`No nested fields for ${fieldId}`);
       return null;
     }
     
     // Filter nested fields by visibility
-    const visibleNestedFields = nestedFields.filter(nestedField => {
-      const isNestedVisible = visibleFields.has(nestedField.id);
-      console.log(`Nested field ${nestedField.id} visibility: ${isNestedVisible}`);
-      return isNestedVisible;
-    });
-
-    console.log(`Visible nested fields for ${fieldId}:`, visibleNestedFields.map(f => f.id));
+    const visibleNestedFields = nestedFields.filter(nestedField => 
+      visibleFields.has(nestedField.id)
+    );
 
     if (visibleNestedFields.length === 0) {
-      console.log(`No visible nested fields for ${fieldId}`);
       return null;
     }
     
@@ -87,7 +70,7 @@ export default function FieldRenderer({
         ))}
       </div>
     );
-  };
+  }, [visibleFields, level, register, errors, getValues, setValue, handleFieldChange, formData]);
 
   // Special handling for Sangha field type
   if (field.type === 'sangha') {
@@ -203,103 +186,111 @@ export default function FieldRenderer({
     );
   }
 
-// Handle source field type with API data
-if (field.type === 'source') {
-  const [sourceOptions, setSourceOptions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Handle source field type with API data - FIXED: Added proper dependencies
+  if (field.type === 'source') {
+    const [sourceOptions, setSourceOptions] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch from API
-  useEffect(() => {
-    console.log(`Fetching sources for field: ${fieldId}`);
-    
-    fetch('/api/sources')
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        console.log('API response:', data);
-        // Data should be the direct array now
-        setSourceOptions(Array.isArray(data) ? data : []);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch sources:', err);
-        // Use hardcoded fallback
-        setSourceOptions([
-          "Mane Mane Samparka",
-          "Street Samparka", 
-          "BJP Karyakartha",
-          "Bala Bharathi Parent",
-          "Kishora Bharathi Parent",
-          "Maithreyi Parent",
-          "Mithra Parent",
-          "Sevika Samithi Spouse",
-          "Relocation from another Milan",
-          "Sangha Utsav",
-          "Join RSS Website",
-          "Join RSS Campaign",
-          "Friend Circle",
-          "Relation Circle",
-          "Yuva Conclave",
-          "Yuva Samavesha",
-          "Existing Pattlist SS"
-        ]);
-        setIsLoading(false);
-      });
-  }, [fieldId]);
+    // Fetch from API - FIXED: Added empty dependency array to run only once
+    useEffect(() => {
+      let isMounted = true;
+      
+      const fetchSources = async () => {
+        try {
+          const response = await fetch('/api/sources');
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          
+          if (isMounted) {
+            setSourceOptions(Array.isArray(data) ? data : []);
+            setIsLoading(false);
+          }
+        } catch (err) {
+          console.error('Failed to fetch sources:', err);
+          if (isMounted) {
+            // Use hardcoded fallback
+            setSourceOptions([
+              "Mane Mane Samparka",
+              "Street Samparka", 
+              "BJP Karyakartha",
+              "Bala Bharathi Parent",
+              "Kishora Bharathi Parent",
+              "Maithreyi Parent",
+              "Mithra Parent",
+              "Sevika Samithi Spouse",
+              "Relocation from another Milan",
+              "Sangha Utsav",
+              "Join RSS Website",
+              "Join RSS Campaign",
+              "Friend Circle",
+              "Relation Circle",
+              "Yuva Conclave",
+              "Yuva Samavesha",
+              "Existing Pattlist SS"
+            ]);
+            setIsLoading(false);
+          }
+        }
+      };
 
-  return (
-    <div key={fieldId} className={fieldWrapperClass}>
-      <label htmlFor={fieldId} className={labelClass}>
-        {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
-      </label>
-      <div className="relative">
-        <select
-          id={fieldId}
-          {...register(fieldId, { 
-            required: field.required && `${field.label} is required` 
-          })}
-          className={`${inputBaseClass} appearance-none bg-white pr-12 cursor-pointer hover:border-orange-400 transition-colors ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-          onChange={(e) => {
-            handleFieldChange(fieldId, e.target.value);
-          }}
-          disabled={isLoading}
-        >
-          <option value="">
-            {isLoading ? 'Loading sources...' : 'Select source'}
-          </option>
-          {sourceOptions.map((option, index) => (
-            <option key={index} value={option}>
-              {option}
+      fetchSources();
+
+      return () => {
+        isMounted = false;
+      };
+    }, []); // Empty dependency array - runs only once
+
+    return (
+      <div key={fieldId} className={fieldWrapperClass}>
+        <label htmlFor={fieldId} className={labelClass}>
+          {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
+        </label>
+        <div className="relative">
+          <select
+            id={fieldId}
+            {...register(fieldId, { 
+              required: field.required && `${field.label} is required` 
+            })}
+            className={`${inputBaseClass} appearance-none bg-white pr-12 cursor-pointer hover:border-orange-400 transition-colors ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            onChange={(e) => {
+              handleFieldChange(fieldId, e.target.value);
+            }}
+            disabled={isLoading}
+          >
+            <option value="">
+              {isLoading ? 'Loading sources...' : 'Select source'}
             </option>
-          ))}
-        </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
-          {isLoading ? (
-            <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
-              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-            </svg>
-          )}
+            {sourceOptions.map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            )}
+          </div>
         </div>
+        
+        {isLoading && (
+          <p className="mt-2 text-sm text-gray-600">Loading sources...</p>
+        )}
+        
+        {errors[fieldId] && (
+          <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+        )}
+        
+        {renderNestedFields(field.nestedFields)}
       </div>
-      
-      {isLoading && (
-        <p className="mt-2 text-sm text-gray-600">Loading sources...</p>
-      )}
-      
-      {errors[fieldId] && (
-        <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
-      )}
-      
-      {renderNestedFields(field.nestedFields)}
-    </div>
-  );
-}
+    );
+  }
 
   // Render checkbox groups with nested fields
   if (field.type === 'checkbox' && field.options && field.options.length > 0) {
@@ -328,7 +319,6 @@ if (field.type === 'source') {
                         newValues = currentValues.filter((val: string) => val !== option);
                       }
                       
-                      console.log(`Checkbox changed: ${fieldId}`, newValues);
                       handleFieldChange(fieldId, newValues);
                     }}
                   />
@@ -598,4 +588,6 @@ if (field.type === 'source') {
         </div>
       );
   }
-}
+});
+
+export default FieldRenderer;
