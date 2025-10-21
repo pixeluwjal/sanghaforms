@@ -27,7 +27,6 @@ Return ONLY a JSON object with this exact structure:
 {
   "title": "Form Title",
   "description": "Form Description",
-
   "sections": [
     {
       "id": "section-1",
@@ -37,12 +36,14 @@ Return ONLY a JSON object with this exact structure:
       "fields": [
         {
           "id": "field-1",
-          "type": "text|email|number|textarea|select|radio|checkbox|date|organization",
+          "type": "text|email|number|textarea|select|radio|checkbox|date|sangha|file|whatsapp_optin|arratai_optin",
           "label": "Field Label",
           "placeholder": "Optional placeholder",
           "required": true,
           "options": ["Option 1", "Option 2"],
-          "order": 0
+          "order": 0,
+          "conditionalRules": [],
+          "nestedFields": []
         }
       ],
       "conditionalRules": []
@@ -51,9 +52,11 @@ Return ONLY a JSON object with this exact structure:
 }
 
 CRITICAL RULES:
+1. Field types must be one of: text, email, number, textarea, select, radio, checkbox, date, sangha, file, whatsapp_optin, arratai_optin
 2. Every section must have conditionalRules array
-3. Use appropriate field types based on context
-4. Return ONLY valid JSON, no other text
+3. Every field must have conditionalRules array and nestedFields array
+4. Use appropriate field types based on context
+5. Return ONLY valid JSON, no other text
 
 User description: ${prompt}`
             }
@@ -100,7 +103,10 @@ User description: ${prompt}`
       }
     }
 
-    return NextResponse.json({ form: formData });
+    // Transform AI data to match your exact Mongoose schema
+    const transformedForm = transformAIDataToSchema(formData);
+
+    return NextResponse.json({ form: transformedForm });
     
   } catch (error) {
     console.error('AI generation error:', error);
@@ -108,4 +114,65 @@ User description: ${prompt}`
       error: 'Failed to generate form with AI: ' + (error instanceof Error ? error.message : 'Unknown error')
     }, { status: 500 });
   }
+}
+
+// Function to transform AI data to match your Mongoose schema
+function transformAIDataToSchema(aiFormData: any) {
+  // Generate proper IDs if they're missing
+  const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Transform sections and fields to ensure they match the schema
+  const transformedSections = aiFormData.sections?.map((section: any, index: number) => ({
+    id: section.id || generateId('section'),
+    title: section.title || `Section ${index + 1}`,
+    description: section.description || '',
+    order: section.order !== undefined ? section.order : index,
+    fields: section.fields?.map((field: any, fieldIndex: number) => ({
+      id: field.id || generateId('field'),
+      type: field.type || 'text',
+      label: field.label || `Field ${fieldIndex + 1}`,
+      placeholder: field.placeholder || '',
+      required: field.required !== undefined ? field.required : false,
+      options: field.options || [],
+      order: field.order !== undefined ? field.order : fieldIndex,
+      conditionalRules: field.conditionalRules || [],
+      nestedFields: field.nestedFields || []
+    })) || [],
+    conditionalRules: section.conditionalRules || []
+  })) || [];
+
+  // Return the complete form structure matching your schema
+  return {
+    title: aiFormData.title || 'AI Generated Form',
+    description: aiFormData.description || '',
+    sections: transformedSections,
+    theme: {
+      primaryColor: '#7C3AED',
+      backgroundColor: '#FFFFFF',
+      textColor: '#1F2937',
+      fontFamily: 'Inter'
+    },
+    images: {
+      logo: '',
+      banner: '',
+      background: ''
+    },
+    settings: {
+      userType: 'swayamsevak',
+      validityDuration: 1440,
+      maxResponses: 1000,
+      allowMultipleResponses: false,
+      enableProgressSave: true,
+      collectEmail: true,
+      customSlug: '',
+      enableCustomSlug: false,
+      isActive: true,
+      showGroupLinks: false,
+      whatsappGroupLink: '',
+      arrataiGroupLink: ''
+    },
+    status: 'draft',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
 }

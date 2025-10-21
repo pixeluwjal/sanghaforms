@@ -15,12 +15,19 @@ export const ConditionalLogicPopup = ({
   onSave,
   onClose
 }: ConditionalLogicPopupProps) => {
-  const [rules, setRules] = useState<ConditionalRule[]>(field.conditionalRules || []);
+  const [rules, setRules] = useState<ConditionalRule[]>(
+    field.conditionalRules?.map(rule => ({
+      ...rule,
+      id: rule.id || `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    })) || []
+  );
+
+  const generateRuleId = () => `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   const addRule = () => {
     setRules([...rules, {
-      id: `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      targetField: '', // Changed from targetFieldId to targetField to match schema
+      id: generateRuleId(),
+      targetField: '',
       operator: 'equals',
       value: '',
       action: 'show'
@@ -70,7 +77,10 @@ export const ConditionalLogicPopup = ({
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           <div className="space-y-4">
             {rules.map((rule, index) => (
-              <div key={rule.id} className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border-2 border-gray-200/50 shadow-sm">
+              <div 
+                key={`${rule.id}-${index}`} // Added index as fallback
+                className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-xl border-2 border-gray-200/50 shadow-sm"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-800 text-lg">Rule {index + 1}</h3>
                   <button
@@ -108,7 +118,7 @@ export const ConditionalLogicPopup = ({
                       Condition
                     </label>
                     <select
-                      value={rule.operator} // Changed from condition to operator to match schema
+                      value={rule.operator}
                       onChange={(e) => updateRule(rule.id, { operator: e.target.value as any })}
                       className="w-full border-2 border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     >
