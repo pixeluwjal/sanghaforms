@@ -16,37 +16,40 @@ export async function GET(request: NextRequest) {
 
     const decoded = await verifyToken(token);
     
-    // Build query based on role
-    const formQuery: any = {};
-    if (decoded.role !== 'super_admin') {
-      formQuery.createdBy = decoded.adminId;
-    }
-
-    const forms = await Form.find(formQuery);
+    // REMOVE role-based filtering - get ALL forms
+    const forms = await Form.find({}); // Empty query to get all forms
     const publishedForms = forms.filter(f => f.status === 'published');
     const draftForms = forms.filter(f => f.status === 'draft');
 
-    // Get total responses
-    const responseCount = await FormResponse.countDocuments({
-      formId: { $in: forms.map(f => f._id) }
-    });
+    // Get total responses from ALL forms
+    const responseCount = await FormResponse.countDocuments({});
 
-    // Get recent forms
-    const recentForms = await Form.find(formQuery)
+    // Get recent forms from ALL forms
+    const recentForms = await Form.find({})
       .sort({ createdAt: -1 })
       .limit(5)
       .populate('createdBy', 'email name')
       .lean();
+
+    // Get responses count for each recent form
+    const recentFormsWithCounts = await Promise.all(
+      recentForms.map(async (form) => {
+        const responsesCount = await FormResponse.countDocuments({ 
+          formId: form._id 
+        });
+        return {
+          ...form,
+          responsesCount
+        };
+      })
+    );
 
     return NextResponse.json({
       total: forms.length,
       published: publishedForms.length,
       draft: draftForms.length,
       totalResponses: responseCount,
-      recentForms: recentForms.map(form => ({
-        ...form,
-        responsesCount: 0 // You might want to aggregate this
-      }))
+      recentForms: recentFormsWithCounts
     });
 
   } catch (error) {

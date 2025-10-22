@@ -68,7 +68,7 @@ export default function FormsPage() {
     setError('');
     
     try {
-      const response = await fetch('/api/forms');
+      const response = await fetch('/api/admin/forms');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

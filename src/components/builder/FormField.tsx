@@ -607,6 +607,30 @@ export const FormField = ({
             <CustomFieldPreview field={field} onUpdate={onUpdate} />
           )}
 
+          {/* Placeholder Configuration for Standard Field Types */}
+          {field.type !== "sangha" && (
+            <div className="mb-4 sm:mb-6">
+              <label className={`block text-sm font-semibold mb-2 sm:mb-3 ${
+                isHidden ? 'text-gray-600' : 'text-black'
+              }`}>
+                Placeholder Text
+              </label>
+              <input
+                type="text"
+                value={field.placeholder || ''}
+                onChange={(e) => onUpdate(field.id, { placeholder: e.target.value })}
+                className="w-full border-2 border-purple-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black"
+                placeholder={`Enter placeholder text for ${field.type} field`}
+                disabled={isHidden}
+              />
+              <p className={`text-xs mt-2 ${
+                isHidden ? 'text-gray-500' : 'text-gray-600'
+              }`}>
+                This text will appear as a hint inside the field
+              </p>
+            </div>
+          )}
+
           {/* Default Value Configuration for Standard Field Types */}
           {field.type !== "sangha" && (
             <div className="mb-4 sm:mb-6">
@@ -644,6 +668,56 @@ export const FormField = ({
               }`}>
                 This value will be pre-filled when the form loads
               </p>
+            </div>
+          )}
+
+          {/* Options Configuration for Select, Radio, Checkbox */}
+          {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox' || field.type === 'source') && (
+            <div className="mb-4 sm:mb-6">
+              <label className={`block text-sm font-semibold mb-2 sm:mb-3 ${
+                isHidden ? 'text-gray-600' : 'text-black'
+              }`}>
+                Options
+              </label>
+              <div className="space-y-2">
+                {field.options?.map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => {
+                        const newOptions = [...(field.options || [])];
+                        newOptions[index] = e.target.value;
+                        onUpdate(field.id, { options: newOptions });
+                      }}
+                      className="flex-1 border-2 border-purple-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black"
+                      placeholder={`Option ${index + 1}`}
+                      disabled={isHidden}
+                    />
+                    <button
+                      onClick={() => {
+                        const newOptions = field.options?.filter((_, i) => i !== index) || [];
+                        onUpdate(field.id, { options: newOptions });
+                      }}
+                      className="p-2 bg-red-100 hover:bg-red-200 rounded-lg text-red-600 hover:text-red-700 transition-colors"
+                      disabled={isHidden}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const newOptions = [...(field.options || []), `Option ${(field.options?.length || 0) + 1}`];
+                    onUpdate(field.id, { options: newOptions });
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors border-2 border-purple-300"
+                  disabled={isHidden}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Option
+                </button>
+              </div>
             </div>
           )}
 

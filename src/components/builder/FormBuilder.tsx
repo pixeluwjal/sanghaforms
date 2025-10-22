@@ -159,9 +159,7 @@ const addNestedFieldRecursively = (
   });
 };
 
-// Image Upload Component - FIXED VERSION
-// components/builder/FormBuilder.tsx - ImageUpload component
-// components/builder/FormBuilder.tsx - ImageUpload component
+// Image Upload Component
 const ImageUpload: React.FC<{
   type: "logo" | "banner";
   currentImage?: string;
@@ -193,7 +191,6 @@ const ImageUpload: React.FC<{
       const formData = new FormData();
       formData.append("file", file);
 
-      // Use your Cloudinary upload API route
       const response = await fetch('/api/upload/cloudinary', {
         method: 'POST',
         body: formData,
@@ -208,7 +205,7 @@ const ImageUpload: React.FC<{
 
       if (result.success && result.url) {
         console.log('✅ Image uploaded successfully:', result.url);
-        onImageUpload(result.url); // This should save to the form
+        onImageUpload(result.url);
       } else {
         throw new Error('Upload failed: No URL returned');
       }
@@ -318,6 +315,7 @@ const ImageUpload: React.FC<{
     </div>
   );
 };
+
 // Preview Component for Default Values
 const DefaultValuePreview: React.FC<{
   section: Section;
@@ -344,7 +342,6 @@ const DefaultValuePreview: React.FC<{
           />
         </div>
 
-        {/* Field Default Values Preview */}
         {section.fields.length > 0 && (
           <div className="mt-4">
             <label className="block text-sm font-medium text-black mb-2">
@@ -360,7 +357,6 @@ const DefaultValuePreview: React.FC<{
                     type="text"
                     value={field.defaultValue || ''}
                     onChange={(e) => {
-                      // This would need to be connected to field update
                       console.log(`Update field ${field.id} default value:`, e.target.value);
                     }}
                     className="flex-1 border border-purple-300 rounded px-2 py-1 text-sm text-black"
@@ -401,7 +397,6 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
       nestedFields: [],
     };
 
-    // Handle specific field types
     if (type === 'readonly_text') {
       return {
         ...baseField,
@@ -446,170 +441,161 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
   };
 
   // Image handlers
- const handleLogoUpload = async (url: string) => {
-  try {
-    console.log('🔄 Saving logo to database:', url);
-    
-    // Update local state immediately for better UX
-    const updatedForm = {
-      ...form,
-      images: {
-        ...form.images,
-        logo: url,
-      },
-    };
-    
-    // Update parent component
-    updateForm(updatedForm);
-    
-    // Save to database via API
-    const response = await fetch('/api/forms', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        formId: form._id,
+  const handleLogoUpload = async (url: string) => {
+    try {
+      console.log('🔄 Saving logo to database:', url);
+      
+      const updatedForm = {
+        ...form,
         images: {
           ...form.images,
           logo: url,
-        }
-      }),
-    });
+        },
+      };
+      
+      updateForm(updatedForm);
+      
+      const response = await fetch('/api/forms', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formId: form._id,
+          images: {
+            ...form.images,
+            logo: url,
+          }
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to save logo to database');
+      if (!response.ok) {
+        throw new Error('Failed to save logo to database');
+      }
+
+      console.log('✅ Logo saved to database successfully');
+    } catch (error) {
+      console.error('❌ Error saving logo to database:', error);
+      alert('Logo uploaded but failed to save. Please try again.');
     }
+  };
 
-    console.log('✅ Logo saved to database successfully');
-  } catch (error) {
-    console.error('❌ Error saving logo to database:', error);
-    alert('Logo uploaded but failed to save. Please try again.');
-  }
-};
-
-const handleLogoRemove = async () => {
-  try {
-    console.log('🔄 Removing logo from database');
-    
-    // Update local state immediately
-    const updatedForm = {
-      ...form,
-      images: {
-        ...form.images,
-        logo: "",
-      },
-    };
-    
-    updateForm(updatedForm);
-    
-    // Save to database via API
-    const response = await fetch('/api/forms', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        formId: form._id,
+  const handleLogoRemove = async () => {
+    try {
+      console.log('🔄 Removing logo from database');
+      
+      const updatedForm = {
+        ...form,
         images: {
           ...form.images,
           logo: "",
-        }
-      }),
-    });
+        },
+      };
+      
+      updateForm(updatedForm);
+      
+      const response = await fetch('/api/forms', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formId: form._id,
+          images: {
+            ...form.images,
+            logo: "",
+          }
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to remove logo from database');
+      if (!response.ok) {
+        throw new Error('Failed to remove logo from database');
+      }
+
+      console.log('✅ Logo removed from database successfully');
+    } catch (error) {
+      console.error('❌ Error removing logo from database:', error);
+      alert('Failed to remove logo. Please try again.');
     }
+  };
 
-    console.log('✅ Logo removed from database successfully');
-  } catch (error) {
-    console.error('❌ Error removing logo from database:', error);
-    alert('Failed to remove logo. Please try again.');
-  }
-};
-const handleBannerUpload = async (url: string) => {
-  try {
-    console.log('🔄 Saving banner to database:', url);
-    
-    // Update local state immediately
-    const updatedForm = {
-      ...form,
-      images: {
-        ...form.images,
-        banner: url,
-      },
-    };
-    
-    updateForm(updatedForm);
-    
-    // Save to database via API
-    const response = await fetch('/api/forms', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        formId: form._id,
+  const handleBannerUpload = async (url: string) => {
+    try {
+      console.log('🔄 Saving banner to database:', url);
+      
+      const updatedForm = {
+        ...form,
         images: {
           ...form.images,
           banner: url,
-        }
-      }),
-    });
+        },
+      };
+      
+      updateForm(updatedForm);
+      
+      const response = await fetch('/api/forms', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formId: form._id,
+          images: {
+            ...form.images,
+            banner: url,
+          }
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to save banner to database');
+      if (!response.ok) {
+        throw new Error('Failed to save banner to database');
+      }
+
+      console.log('✅ Banner saved to database successfully');
+    } catch (error) {
+      console.error('❌ Error saving banner to database:', error);
+      alert('Banner uploaded but failed to save. Please try again.');
     }
+  };
 
-    console.log('✅ Banner saved to database successfully');
-  } catch (error) {
-    console.error('❌ Error saving banner to database:', error);
-    alert('Banner uploaded but failed to save. Please try again.');
-  }
-};
-
-
-const handleBannerRemove = async () => {
-  try {
-    console.log('🔄 Removing banner from database');
-    
-    // Update local state immediately
-    const updatedForm = {
-      ...form,
-      images: {
-        ...form.images,
-        banner: "",
-      },
-    };
-    
-    updateForm(updatedForm);
-    
-    // Save to database via API
-    const response = await fetch('/api/forms', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        formId: form._id,
+  const handleBannerRemove = async () => {
+    try {
+      console.log('🔄 Removing banner from database');
+      
+      const updatedForm = {
+        ...form,
         images: {
           ...form.images,
           banner: "",
-        }
-      }),
-    });
+        },
+      };
+      
+      updateForm(updatedForm);
+      
+      const response = await fetch('/api/forms', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formId: form._id,
+          images: {
+            ...form.images,
+            banner: "",
+          }
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to remove banner from database');
+      if (!response.ok) {
+        throw new Error('Failed to remove banner from database');
+      }
+
+      console.log('✅ Banner removed from database successfully');
+    } catch (error) {
+      console.error('❌ Error removing banner from database:', error);
+      alert('Failed to remove banner. Please try again.');
     }
-
-    console.log('✅ Banner removed from database successfully');
-  } catch (error) {
-    console.error('❌ Error removing banner from database:', error);
-    alert('Failed to remove banner. Please try again.');
-  }
-};
+  };
 
   // Field and section handlers
   const addFieldToSection = (sectionId: string, fieldType: string) => {
@@ -848,19 +834,11 @@ const handleBannerRemove = async () => {
   const currentSection = form.sections[currentSectionIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100">
-      <div className="container mx-auto px-4 py-6">
-        {/* Mobile Sidebar Overlay */}
-        {mobileSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-        )}
-
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
+      <div className="h-screen flex flex-col">
         {/* Header with Image Settings */}
-        <div className="mb-8 text-center relative">
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
+        <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 px-4 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Mobile Menu Button */}
             <div className="lg:hidden flex items-center">
               <button
@@ -872,10 +850,10 @@ const handleBannerRemove = async () => {
             </div>
 
             <div className="flex-1 text-center">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                 Form Builder
               </h1>
-              <p className="text-black mt-2 text-sm sm:text-base lg:text-lg">
+              <p className="text-black mt-1 text-xs sm:text-sm lg:text-base">
                 Build your form by adding fields and sections
               </p>
             </div>
@@ -900,11 +878,11 @@ const handleBannerRemove = async () => {
 
           {/* Banner Preview */}
           {form.images?.banner && (
-            <div className="mt-4 rounded-xl overflow-hidden shadow-lg border-2 border-purple-300">
+            <div className="mt-3 rounded-xl overflow-hidden shadow-lg border-2 border-purple-300">
               <img
                 src={form.images.banner}
                 alt="Form Banner"
-                className="w-full h-24 sm:h-32 lg:h-48 object-cover"
+                className="w-full h-20 sm:h-24 lg:h-28 object-cover"
               />
             </div>
           )}
@@ -941,25 +919,26 @@ const handleBannerRemove = async () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+        {/* Main Content Area */}
+        <div className="flex-1 flex overflow-hidden">
           {/* Toolbox Sidebar - Left */}
-          <div className={`lg:col-span-1 ${
+          <div className={`flex-shrink-0 ${
             mobileSidebarOpen 
               ? 'fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-xl transform translate-x-0 transition-transform duration-300' 
-              : 'fixed -translate-x-full lg:relative lg:translate-x-0'
+              : 'fixed -translate-x-full lg:relative lg:translate-x-0 lg:w-80'
           }`}>
-            <div className="h-full overflow-y-auto border-2 border-purple-300 rounded-2xl bg-white">
+            <div className="h-full overflow-y-auto border-r-2 border-purple-300 bg-white">
               <FieldToolbox onFieldAdd={handleToolboxFieldAdd} />
             </div>
           </div>
 
           {/* Main Builder Area - Right */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="flex-1 flex flex-col min-w-0">
             {/* Section Navigation Header */}
-            <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-purple-300 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-black">
+            <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-black truncate">
                     {currentSection ? currentSection.title : "No Sections"}
                   </h3>
                   <p className="text-sm text-gray-600">
@@ -967,23 +946,23 @@ const handleBannerRemove = async () => {
                   </p>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 flex-wrap">
                   {/* AI Generate Button */}
                   <button
                     onClick={() => setShowAIGenerator(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold hover:scale-105"
+                    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition-all duration-300 font-semibold text-sm"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span className="hidden sm:inline">AI Generate</span>
                   </button>
 
                   {/* Section Counter */}
-                  <div className="text-sm text-black font-medium">
+                  <div className="text-sm text-black font-medium whitespace-nowrap">
                     Section {currentSectionIndex + 1} of {form.sections.length}
                   </div>
                   
                   {/* Navigation Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={goToPreviousSection}
                       disabled={currentSectionIndex === 0}
@@ -1005,19 +984,19 @@ const handleBannerRemove = async () => {
 
               {/* Section Quick Navigation */}
               {form.sections.length > 1 && (
-                <div className="mt-4">
-                  <div className="flex flex-wrap gap-2">
+                <div className="mt-3">
+                  <div className="flex flex-wrap gap-1 overflow-x-auto pb-1">
                     {form.sections.map((section, index) => (
                       <button
                         key={section.id}
                         onClick={() => goToSection(index)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
                           index === currentSectionIndex
-                            ? 'bg-purple-600 text-white shadow-lg border-2 border-purple-600'
-                            : 'bg-purple-100 text-black border-2 border-purple-300 hover:bg-purple-200'
+                            ? 'bg-purple-600 text-white shadow border border-purple-600'
+                            : 'bg-purple-100 text-black border border-purple-300 hover:bg-purple-200'
                         }`}
                       >
-                        {section.title || `Section ${index + 1}`}
+                        {section.title || `S${index + 1}`}
                       </button>
                     ))}
                   </div>
@@ -1025,83 +1004,92 @@ const handleBannerRemove = async () => {
               )}
             </div>
 
-            {/* Default Value Preview */}
-            {showPreview && currentSection && (
-              <DefaultValuePreview
-                section={currentSection}
-                onUpdate={updateSection}
-              />
-            )}
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto">
+                <div className="p-4 space-y-4">
+                  {/* Default Value Preview */}
+                  {showPreview && currentSection && (
+                    <DefaultValuePreview
+                      section={currentSection}
+                      onUpdate={updateSection}
+                    />
+                  )}
 
-            {/* Current Active Section */}
-            {currentSection ? (
-              <FormSection
-                key={currentSection.id}
-                section={currentSection}
-                onUpdate={updateSection}
-                onDelete={deleteSection}
-                onAddField={addFieldToSection}
-                onFieldUpdate={updateField}
-                onFieldDelete={deleteField}
-                onAddNestedField={addNestedField}
-                onEditConditional={setEditingField}
-                onEditSectionConditional={setEditingSection}
-                onSectionMoveUp={moveSectionUp}
-                onSectionMoveDown={moveSectionDown}
-                onFieldMoveUp={moveFieldUp}
-                onFieldMoveDown={moveFieldDown}
-                sectionIndex={currentSection.order}
-                totalSections={form.sections.length}
-              />
-            ) : (
-              /* Empty State */
-              <div className="bg-white rounded-2xl p-8 sm:p-12 border-2 border-purple-300 shadow-lg text-center">
-                <div className="max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-300">
-                    <Plus className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-black mb-2">
-                    No Sections Yet
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Start building your form by adding your first section.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button
-                      onClick={addSection}
-                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium border-2 border-purple-600"
-                    >
-                      Create First Section
-                    </button>
-                    <button
-                      onClick={() => setShowAIGenerator(true)}
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium border-2 border-purple-600"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      AI Generate
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                  {/* Current Active Section */}
+                  {currentSection ? (
+                    <div className="bg-white rounded-xl border-2 border-purple-300 shadow-lg">
+                      <FormSection
+                        key={currentSection.id}
+                        section={currentSection}
+                        onUpdate={updateSection}
+                        onDelete={deleteSection}
+                        onAddField={addFieldToSection}
+                        onFieldUpdate={updateField}
+                        onFieldDelete={deleteField}
+                        onAddNestedField={addNestedField}
+                        onEditConditional={setEditingField}
+                        onEditSectionConditional={setEditingSection}
+                        onSectionMoveUp={moveSectionUp}
+                        onSectionMoveDown={moveSectionDown}
+                        onFieldMoveUp={moveFieldUp}
+                        onFieldMoveDown={moveFieldDown}
+                        sectionIndex={currentSection.order}
+                        totalSections={form.sections.length}
+                      />
+                    </div>
+                  ) : (
+                    /* Empty State */
+                    <div className="bg-white rounded-xl p-6 border-2 border-purple-300 shadow-lg text-center">
+                      <div className="max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-300">
+                          <Plus className="w-8 h-8 text-purple-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-black mb-2">
+                          No Sections Yet
+                        </h3>
+                        <p className="text-gray-600 mb-6">
+                          Start building your form by adding your first section.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            onClick={addSection}
+                            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium border-2 border-purple-600"
+                          >
+                            Create First Section
+                          </button>
+                          <button
+                            onClick={() => setShowAIGenerator(true)}
+                            className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium border-2 border-purple-600"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            AI Generate
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-            {/* Add Section Button */}
-            <button
-              onClick={addSection}
-              className="w-full flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:shadow-xl transition-all duration-300 group"
-            >
-              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-inner border-2 border-purple-300">
-                <Plus className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-purple-600" />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-base sm:text-lg lg:text-xl text-black">
-                  Add New Section
+                  {/* Add Section Button */}
+                  <button
+                    onClick={addSection}
+                    className="w-full flex items-center justify-center gap-3 p-4 bg-white border-2 border-dashed border-purple-300 rounded-xl text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:shadow-lg transition-all duration-300 group"
+                  >
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-inner border-2 border-purple-300">
+                      <Plus className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-base text-black">
+                        Add New Section
+                      </div>
+                      <div className="text-purple-600 text-sm">
+                        Organize your form into multiple sections
+                      </div>
+                    </div>
+                  </button>
                 </div>
-                <div className="text-purple-600 text-xs sm:text-sm">
-                  Organize your form into multiple sections
-                </div>
               </div>
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1138,6 +1126,14 @@ const handleBannerRemove = async () => {
           onSectionGenerate={handleAISectionGenerate}
           currentSections={form.sections}
           onClose={() => setShowAIGenerator(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
         />
       )}
     </div>

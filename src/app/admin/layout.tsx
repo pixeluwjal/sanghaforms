@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, 
   FileText, 
@@ -14,7 +14,8 @@ import {
   User,
   Eye,
   FilePlus,
-  MessageSquare
+  MessageSquare,
+  Database
 } from 'lucide-react';
 
 // --- Navigation Items ---
@@ -26,12 +27,15 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-  { name: 'Sangha Hierarchy', href: '/admin/sangha-hierarchy', icon: Users }
-]
+  { name: 'Sangha Hierarchy', href: '/admin/sangha-hierarchy', icon: Users },
+  { name: 'Sources', href: '/admin/sources', icon: Database }
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   // --- Routes that won't use this layout ---
   const noLayoutRoutes = [
@@ -39,6 +43,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/login',
     '/admin/forgot-password'
   ];
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Clear any client-side storage if needed
+        localStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminToken');
+        
+        // Redirect to login page
+        router.push('/login');
+      } else {
+        console.error('Logout failed');
+        // Fallback: redirect anyway
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: redirect anyway
+      router.push('/login');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const shouldShowLayout = !noLayoutRoutes.some(route => 
     pathname?.startsWith(route)
@@ -163,13 +200,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   </p>
                   <p className="text-xs text-gray-500 font-medium">Administrator</p>
                 </div>
-                <Link
-                  href="/login"
-                  className="w-10 h-10 bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500 transition-all duration-300 rounded-xl flex items-center justify-center border border-gray-200 hover:border-red-200"
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="w-10 h-10 bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-500 transition-all duration-300 rounded-xl flex items-center justify-center border border-gray-200 hover:border-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Logout"
                 >
-                  <LogOut className="w-5 h-5" />
-                </Link>
+                  {isLoggingOut ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <LogOut className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
