@@ -2,9 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Form from '@/models/Form';
-import FormResponse from '@/models/FormResponse';
+import LeadResponse from '@/models/LeadResponse';
+import SwayamsevakResponse from '@/models/SwayamsevakResponse';
 
-// GET - Fetch form by slug
+// GET - Fetch form by slug (keep this same as before)
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
@@ -12,26 +13,21 @@ export async function GET(
   try {
     const { slug } = params;
 
-    // Connect to MongoDB if not already connected
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI!);
     }
 
-    // Build query to search by both custom slug and _id
     const query: any = {
       'settings.isActive': true,
       status: 'published'
     };
 
-    // Check if slug is a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(slug)) {
-      // Search by both _id and customSlug to cover all cases
       query.$or = [
         { _id: new mongoose.Types.ObjectId(slug) },
         { 'settings.customSlug': slug }
       ];
     } else {
-      // Search only by custom slug
       query['settings.customSlug'] = slug;
     }
 
@@ -44,7 +40,6 @@ export async function GET(
       );
     }
 
-    // Return public form data (exclude sensitive info)
     const publicForm = {
       _id: form._id,
       title: form.title,
@@ -62,7 +57,9 @@ export async function GET(
           placeholder: field.placeholder,
           required: field.required,
           options: field.options,
-          order: field.order
+          order: field.order,
+          conditionalRules: field.conditionalRules,
+          nestedFields: field.nestedFields
         }))
       })),
       theme: form.theme,
@@ -70,6 +67,7 @@ export async function GET(
       status: form.status,
       createdAt: form.createdAt,
       settings: {
+        userType: form.settings.userType,
         customSlug: form.settings.customSlug,
         allowMultipleResponses: form.settings.allowMultipleResponses,
         enableProgressSave: form.settings.enableProgressSave,
@@ -89,7 +87,7 @@ export async function GET(
   }
 }
 
-// POST - Submit form responses
+// POST - Submit form responses to SPECIFIC collection based on userType
 export async function POST(
   request: NextRequest,
   { params }: { params: { slug: string } }
@@ -99,12 +97,14 @@ export async function POST(
     const body = await request.json();
     const { responses, submittedAt } = body;
 
-    // Connect to MongoDB if not already connected
+    console.log('📥 Form submission received for slug:', slug);
+    console.log('📝 Responses count:', responses?.length);
+
     if (mongoose.connection.readyState !== 1) {
       await mongoose.connect(process.env.MONGODB_URI!);
     }
 
-    // First, find the form to get its ID and type
+    // Find the form
     const formQuery: any = {
       'settings.isActive': true,
       status: 'published'
@@ -122,23 +122,20 @@ export async function POST(
     const form = await Form.findOne(formQuery);
     
     if (!form) {
+      console.log('❌ Form not found for slug:', slug);
       return NextResponse.json(
         { error: 'Form not found or is no longer available' },
         { status: 404 }
       );
     }
 
-    // Determine collection based on form type (SS or Leads)
-    const formType = form.settings.formType || 'ss';
-    const collectionName = formType.toLowerCase() === 'leads' ? 'leads' : 'ss';
+    console.log('📋 Form found:', form.title);
+    console.log('👥 Form userType:', form.settings.userType);
 
-    // Get client information
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown';
+    const userType = form.settings.userType || 'swayamsevak';
+    const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
-    // Validate responses structure
     if (!responses || !Array.isArray(responses)) {
       return NextResponse.json(
         { error: 'Invalid responses format' },
@@ -146,7 +143,7 @@ export async function POST(
       );
     }
 
-    // Create a map of field IDs to field details for quick lookup
+    // Create field map for enhanced responses
     const fieldMap = new Map();
     form.sections.forEach((section: any) => {
       section.fields.forEach((field: any) => {
@@ -154,6 +151,15 @@ export async function POST(
           type: field.type,
           label: field.label
         });
+        
+        if (field.nestedFields && Array.isArray(field.nestedFields)) {
+          field.nestedFields.forEach((nestedField: any) => {
+            fieldMap.set(nestedField.id, {
+              type: nestedField.type,
+              label: nestedField.label
+            });
+          });
+        }
       });
     });
 
@@ -168,40 +174,149 @@ export async function POST(
       };
     });
 
-    // Create and save the response with complete field information
-    const formResponse = new FormResponse({
-      formId: form._id,
-      formTitle: form.title,
-      formSlug: form.settings.customSlug || form._id.toString(),
-      formType: formType,
-      collection: collectionName,
-      responses: enhancedResponses,
-      submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
-      ipAddress: ipAddress,
-      userAgent: userAgent
-    });
+    let savedResponse;
+    let collectionName;
 
-    await formResponse.save();
+    // Save to SPECIFIC collection based on userType
+    if (userType === 'lead') {
+      console.log('💼 Saving to LEAD collection...');
+      collectionName = 'leads';
+
+      // Extract lead-specific information
+      const name = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('name') || 
+        r.fieldType === 'text'
+      )?.value || '';
+
+      const email = enhancedResponses.find(r => 
+        r.fieldType === 'email'
+      )?.value || '';
+
+      const phone = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('phone') || 
+        r.fieldLabel.toLowerCase().includes('mobile')
+      )?.value || '';
+
+      const leadResponse = new LeadResponse({
+        formId: form._id,
+        formTitle: form.title,
+        formSlug: form.settings.customSlug || form._id.toString(),
+        responses: enhancedResponses,
+        // Lead-specific fields
+        name: name,
+        email: email,
+        phone: phone,
+        leadScore: calculateLeadScore(enhancedResponses),
+        status: 'new',
+        source: 'form_submission',
+        ipAddress: ipAddress,
+        userAgent: userAgent
+      });
+      
+      savedResponse = await leadResponse.save();
+      console.log('✅ Saved to LEAD collection with ID:', savedResponse._id);
+
+    } else {
+      console.log('🕉️ Saving to SWAYAMSEVAK collection...');
+      collectionName = 'swayamsevak';
+
+      // Extract swayamsevak-specific information
+      const swayamsevakId = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('id') ||
+        r.fieldLabel.toLowerCase().includes('swayamsevak')
+      )?.value || '';
+
+      const sangha = enhancedResponses.find(r => 
+        r.fieldType === 'sangha'
+      )?.value || '';
+
+      const area = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('area')
+      )?.value || '';
+
+      const name = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('name')
+      )?.value || '';
+
+      const email = enhancedResponses.find(r => 
+        r.fieldType === 'email'
+      )?.value || '';
+
+      const phone = enhancedResponses.find(r => 
+        r.fieldLabel.toLowerCase().includes('phone') || 
+        r.fieldLabel.toLowerCase().includes('mobile')
+      )?.value || '';
+
+      const swayamsevakResponse = new SwayamsevakResponse({
+        formId: form._id,
+        formTitle: form.title,
+        formSlug: form.settings.customSlug || form._id.toString(),
+        responses: enhancedResponses,
+        // Swayamsevak-specific fields
+        swayamsevakId: swayamsevakId,
+        sangha: sangha,
+        area: area,
+        name: name,
+        email: email,
+        phone: phone,
+        ipAddress: ipAddress,
+        userAgent: userAgent
+      });
+      
+      savedResponse = await swayamsevakResponse.save();
+      console.log('✅ Saved to SWAYAMSEVAK collection with ID:', savedResponse._id);
+    }
+
+    // Check for WhatsApp/Arratai opt-ins
+    const whatsappOptin = enhancedResponses.find(r => 
+      r.fieldType === 'whatsapp_optin' && r.value === 'true'
+    );
+    
+    const arrataiOptin = enhancedResponses.find(r => 
+      r.fieldType === 'arratai_optin' && r.value === 'true'
+    );
+
+    console.log('📱 WhatsApp Opt-in:', !!whatsappOptin);
+    console.log('👥 Arratai Opt-in:', !!arrataiOptin);
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Form response submitted successfully',
-      responseId: formResponse._id,
+      message: `Form response submitted successfully to ${collectionName} collection`,
+      responseId: savedResponse._id,
       formTitle: form.title,
+      userType: userType,
       collection: collectionName,
-      formType: formType,
       groupLinks: {
         showGroupLinks: form.settings.showGroupLinks,
         whatsappGroupLink: form.settings.whatsappGroupLink,
         arrataiGroupLink: form.settings.arrataiGroupLink
+      },
+      optIns: {
+        whatsapp: !!whatsappOptin,
+        arratai: !!arrataiOptin
       }
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Error submitting form response:', error);
+    console.error('❌ Error submitting form response:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
+}
+
+// Helper function to calculate lead score
+function calculateLeadScore(responses: any[]): number {
+  let score = 0;
+  
+  responses.forEach(response => {
+    if (response.fieldType === 'email' && response.value) score += 25;
+    if (response.fieldType === 'phone' && response.value) score += 25;
+    if (response.fieldLabel.toLowerCase().includes('name') && response.value) score += 15;
+    if (response.fieldLabel.toLowerCase().includes('interest') && response.value) score += 20;
+    if (response.fieldType === 'whatsapp_optin' && response.value === 'true') score += 15;
+  });
+  
+  return Math.min(score, 100);
 }

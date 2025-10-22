@@ -157,8 +157,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    // Validate form_name length if provided
-    if (updateData.form_name && updateData.form_name.length > 100) {
+    // Validate form_name12 length if provided
+    if (updateData.form_name12 && updateData.form_name12.length > 100) {
       return NextResponse.json({ error: 'Form name must be less than 100 characters' }, { status: 400 });
     }
 
@@ -170,7 +170,7 @@ export async function PUT(request: NextRequest) {
     // Prepare update data - only allow specific fields to be updated
     const allowedFields = [
       'title',
-      'form_name',
+      'form_name12', // Make sure this is included
       'description',
       'status',
       'settings',
@@ -191,7 +191,7 @@ export async function PUT(request: NextRequest) {
 
     // Trim string fields
     if (safeUpdateData.title) safeUpdateData.title = safeUpdateData.title.trim();
-    if (safeUpdateData.form_name) safeUpdateData.form_name = safeUpdateData.form_name.trim();
+    if (safeUpdateData.form_name12) safeUpdateData.form_name12 = safeUpdateData.form_name12.trim();
     if (safeUpdateData.description) safeUpdateData.description = safeUpdateData.description.trim();
 
     const form = await Form.findByIdAndUpdate(
@@ -208,7 +208,7 @@ export async function PUT(request: NextRequest) {
       form: {
         _id: form._id,
         title: form.title,
-        form_name: form.form_name,
+        form_name12: form.form_name12, // Return the updated form_name12
         description: form.description,
         status: form.status,
         createdAt: form.createdAt,
