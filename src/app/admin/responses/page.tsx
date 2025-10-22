@@ -21,6 +21,7 @@ interface FormResponse {
   _id: string;
   formId: string;
   formTitle: string;
+  formName: string;
   formType: string;
   collection: string;
   submittedAt: string;
@@ -40,6 +41,7 @@ interface FormResponse {
 interface Form {
   _id: string;
   title: string;
+  form_name12: string;
   sections: Array<{
     fields: Array<{
       id: string;
@@ -311,8 +313,9 @@ export default function ResponsesPage() {
           field.label.toLowerCase().includes(searchLower)
         );
         const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
+        const matchesFormName = response.formName?.toLowerCase().includes(searchLower);
         
-        if (!hasMatchingResponse && !matchesFormTitle) {
+        if (!hasMatchingResponse && !matchesFormTitle && !matchesFormName) {
           return false;
         }
       }
@@ -325,7 +328,7 @@ export default function ResponsesPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedResponses = filteredResponses.slice(startIndex, startIndex + itemsPerPage);
 
-  // Enhanced CSV Export with Sangha names
+  // Enhanced CSV Export with Sangha names and form name
   const exportToCSV = () => {
     try {
       const dataToExport = selectedResponses.size > 0 
@@ -346,6 +349,7 @@ export default function ResponsesPage() {
       const headers = [
         'Response ID',
         'Form Title',
+        'Form Name',
         'Submitted At',
         ...fieldLabels
       ];
@@ -354,6 +358,7 @@ export default function ResponsesPage() {
         const baseData = [
           response._id,
           response.formTitle,
+          response.formName || 'Not specified',
           new Date(response.submittedAt).toLocaleString('en-US', {
             year: 'numeric',
             month: '2-digit',
@@ -480,7 +485,14 @@ export default function ResponsesPage() {
             </h1>
             <p className="text-gray-700 text-lg">
               {filteredResponses.length} submissions • {selectedResponses.size > 0 && `${selectedResponses.size} selected`}
-              {selectedForm && forms.find(f => f._id === selectedForm) && ` • ${forms.find(f => f._id === selectedForm)?.title}`}
+              {selectedForm && forms.find(f => f._id === selectedForm) && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold text-purple-600">
+                    {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
+                  </span>
+                </>
+              )}
             </p>
           </div>
           
@@ -536,7 +548,7 @@ export default function ResponsesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Form Filter - Auto-selected, no "All Forms" option */}
+            {/* Form Filter */}
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
                 Form
@@ -551,7 +563,7 @@ export default function ResponsesPage() {
               >
                 {forms.map(form => (
                   <option key={form._id} value={form._id}>
-                    {form.title}
+                    {form.form_name12 || form.title}
                   </option>
                 ))}
               </select>
@@ -592,7 +604,7 @@ export default function ResponsesPage() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  placeholder="Search in responses..."
+                  placeholder="Search in responses, form titles, or form names..."
                   className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 placeholder-gray-400 text-gray-900 font-medium shadow-sm hover:shadow-md"
                 />
               </div>
@@ -604,10 +616,19 @@ export default function ResponsesPage() {
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="p-6 border-b border-gray-200/60">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-900">
-                Responses ({filteredResponses.length})
-                {tableColumns.length > 0 && ` • ${tableColumns.length} fields`}
-              </h3>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Responses ({filteredResponses.length})
+                  {tableColumns.length > 0 && ` • ${tableColumns.length} fields`}
+                </h3>
+                {selectedForm && forms.find(f => f._id === selectedForm) && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Form: <span className="font-medium text-purple-600">
+                      {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
+                    </span>
+                  </p>
+                )}
+              </div>
               <div className="text-sm text-gray-500">
                 Page {currentPage} of {totalPages}
               </div>
@@ -792,12 +813,28 @@ export default function ResponsesPage() {
                                             <div className="text-gray-900 mt-1">{response.formTitle}</div>
                                           </div>
                                           <div>
+                                            <span className="font-medium text-gray-700">Form Name:</span>
+                                            <div className="text-gray-900 mt-1 font-medium">
+                                              {response.formName || 'Not specified'}
+                                            </div>
+                                          </div>
+                                          <div>
                                             <span className="font-medium text-gray-700">Form Type:</span>
                                             <div className="text-gray-900 mt-1 capitalize">{response.formType}</div>
                                           </div>
                                           <div>
                                             <span className="font-medium text-gray-700">Collection:</span>
                                             <div className="text-gray-900 mt-1">{response.collection}</div>
+                                          </div>
+                                          <div>
+                                            <span className="font-medium text-gray-700">Submitted At:</span>
+                                            <div className="text-gray-900 mt-1">
+                                              {new Date(response.submittedAt).toLocaleString()}
+                                            </div>
+                                          </div>
+                                          <div>
+                                            <span className="font-medium text-gray-700">IP Address:</span>
+                                            <div className="text-gray-900 mt-1">{response.ipAddress}</div>
                                           </div>
                                           <div>
                                             <span className="font-medium text-gray-700">User Agent:</span>
@@ -828,10 +865,17 @@ export default function ResponsesPage() {
                   No responses found
                 </h3>
                 <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto leading-relaxed">
-                  {searchTerm || dateRange !== 'all'
-                    ? 'Try adjusting your filters to see more results'
-                    : 'No form responses have been submitted yet'
-                  }
+                  {selectedForm && forms.find(f => f._id === selectedForm) ? (
+                    <>
+                      No responses yet for <span className="font-semibold text-purple-600">
+                        {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
+                      </span>
+                    </>
+                  ) : searchTerm || dateRange !== 'all' ? (
+                    'Try adjusting your filters to see more results'
+                  ) : (
+                    'No form responses have been submitted yet'
+                  )}
                 </p>
                 {searchTerm || dateRange !== 'all' ? (
                   <button

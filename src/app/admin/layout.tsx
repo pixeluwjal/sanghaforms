@@ -77,9 +77,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
               <div className="flex flex-col">
                 <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                  FormBuilder
+                  SS Portal
                 </span>
-                <span className="text-xs text-gray-500 font-medium">Admin Portal</span>
               </div>
             </Link>
           </div>

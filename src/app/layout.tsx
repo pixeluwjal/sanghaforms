@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sangha Forms - Form Management System",
+  title: "SS Portal",
   description: "Comprehensive form management platform for Yuva Sangha organization with advanced response tracking and analytics",
 };
 

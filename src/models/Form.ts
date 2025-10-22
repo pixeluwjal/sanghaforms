@@ -1,3 +1,4 @@
+// models/Form.ts
 import mongoose from 'mongoose';
 
 const ConditionalRuleSchema = new mongoose.Schema({
@@ -18,7 +19,7 @@ const ConditionalRuleSchema = new mongoose.Schema({
 
 const FieldConditionalRuleSchema = new mongoose.Schema({
   id: String,
-  targetField: String, // The field that triggers the condition
+  targetField: String,
   operator: {
     type: String,
     enum: ['equals', 'not_equals', 'contains', 'greater_than', 'less_than']
@@ -31,33 +32,21 @@ const FieldConditionalRuleSchema = new mongoose.Schema({
   }
 });
 
-// FIXED: Added nestedFields to the FieldSchema
 const FieldSchema = new mongoose.Schema({
   id: String,
   type: {
     type: String,
     enum: [
-      'text', 
-      'email', 
-      'number', 
-      'textarea', 
-      'select', 
-      'radio', 
-      'checkbox', 
-      'date', 
-      'sangha', 
-      'file', 
-      'whatsapp_optin', 
-      'arratai_optin',
-      'readonly_text', // ADD THIS
-      'source' // ADD THIS
+      'text', 'email', 'number', 'textarea', 'select', 'radio', 
+      'checkbox', 'date', 'sangha', 'file', 'whatsapp_optin', 
+      'arratai_optin', 'readonly_text', 'source'
     ]
   },
   label: String,
   placeholder: String,
   required: Boolean,
   options: [String],
-  defaultValue: String, // ADD THIS for readonly_text field
+  defaultValue: String,
   order: Number,
   conditionalRules: [FieldConditionalRuleSchema],
   nestedFields: [{
@@ -88,7 +77,7 @@ const SettingsSchema = new mongoose.Schema({
     enum: ['swayamsevak', 'lead'],
     default: 'swayamsevak'
   },
-  validityDuration: { type: Number, default: 1440 }, // minutes
+  validityDuration: { type: Number, default: 1440 },
   maxResponses: { type: Number, default: 1000 },
   allowMultipleResponses: { type: Boolean, default: false },
   enableProgressSave: { type: Boolean, default: true },
@@ -96,14 +85,15 @@ const SettingsSchema = new mongoose.Schema({
   customSlug: String,
   enableCustomSlug: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
-  
   showGroupLinks: { type: Boolean, default: false },
   whatsappGroupLink: { type: String, default: '' },
   arrataiGroupLink: { type: String, default: '' }
 });
 
+// FIXED: Added suppressReservedKeysWarning to remove the warning
 const FormSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  form_name12: { type: String, required: true },
   description: String,
   sections: [SectionSchema],
   theme: ThemeSchema,
@@ -121,6 +111,8 @@ const FormSchema = new mongoose.Schema({
   createdBy: mongoose.Schema.Types.ObjectId,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
+}, {
+  suppressReservedKeysWarning: true // This removes the warning
 });
 
 export default mongoose.models.Form || mongoose.model('Form', FormSchema);

@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     // Just verify the token - any authenticated admin can see all responses
     await verifyToken(token);
 
-    // Get ALL forms (no filtering by admin)
-    const allForms = await Form.find({}).select('_id title sections settings').lean();
+    // Get ALL forms (no filtering by admin) - INCLUDING form_name12
+    const allForms = await Form.find({}).select('_id title form_name12 sections settings').lean();
     const allFormIds = allForms.map(form => form._id.toString());
 
     console.log(`📋 Found ${allForms.length} total forms`);
@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
         _id: response._id,
         formId: response.formId.toString(),
         formTitle: form?.title || 'Unknown Form',
+        formName: form?.form_name12 || form?.title || 'Unknown Form', // ADDED: Include form_name12
         formType: response.formType,
         collection: response.collection,
         submittedAt: response.submittedAt,
@@ -169,6 +170,7 @@ export async function GET(request: NextRequest) {
       forms: allForms.map(form => ({
         _id: form._id,
         title: form.title,
+        form_name12: form.form_name12, // ADDED: Include form_name12 in forms list
         sections: form.sections
       }))
     });

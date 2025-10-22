@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
 
     const form = new Form({
       title: title.trim(),
+      form_name12: title.trim(), // Initialize form_name with title
       description: description?.trim() || '',
       theme: theme || {
         primaryColor: '#7C3AED',
@@ -79,24 +80,52 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const formId = searchParams.get('id');
 
-    if (!formId) {
-      return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
-    }
+    if (formId) {
+      // Single form request
+      if (!mongoose.Types.ObjectId.isValid(formId)) {
+        return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
+      }
 
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(formId)) {
-      return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
-    }
+      const form = await Form.findById(formId);
+      if (!form) {
+        return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+      }
 
-    const form = await Form.findById(formId);
-    if (!form) {
-      return NextResponse.json({ error: 'Form not found' }, { status: 404 });
-    }
+      return NextResponse.json({ 
+        success: true,
+        form 
+      });
+    } else {
+      // Multiple forms request (for admin panel)
+      const token = request.cookies.get('token')?.value;
+      let forms;
 
-    return NextResponse.json({ 
-      success: true,
-      form 
-    });
+      if (token) {
+        try {
+          const decoded = await verifyToken(token);
+          // Fetch forms created by this user
+          forms = await Form.find({ createdBy: decoded.adminId })
+            .sort({ updatedAt: -1 })
+            .select('-sections -theme'); // Exclude heavy fields for listing
+        } catch (error) {
+          // If token is invalid, return all forms (or handle as needed)
+          forms = await Form.find().sort({ updatedAt: -1 }).select('-sections -theme');
+        }
+      } else {
+        forms = await Form.find().sort({ updatedAt: -1 }).select('-sections -theme');
+      }
+
+      // Add responses count to each form
+      const formsWithCounts = forms.map(form => ({
+        ...form.toObject(),
+        responsesCount: Math.floor(Math.random() * 100) // Replace with actual responses count from your database
+      }));
+
+      return NextResponse.json({ 
+        success: true,
+        forms: formsWithCounts
+      });
+    }
 
   } catch (error) {
     console.error('Form fetch error:', error);
@@ -122,33 +151,93 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
     }
 
-    // Prevent updating certain fields
-    const { _id, createdBy, createdAt, ...safeUpdateData } = updateData;
-
-    const form = await Form.findByIdAndUpdate(
-      formId, 
-      { 
-        ...safeUpdateData, 
-        updatedAt: new Date() 
-      },
-      { 
-        new: true,
-        runValidators: true // Ensure schema validation runs
-      }
-    );
-
-    if (!form) {
+    // Check if form exists
+    const existingForm = await Form.findById(formId);
+    if (!existingForm) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
+    // Validate form_name length if provided
+    if (updateData.form_name && updateData.form_name.length > 100) {
+      return NextResponse.json({ error: 'Form name must be less than 100 characters' }, { status: 400 });
+    }
+
+    // Validate title length if provided
+    if (updateData.title && updateData.title.length > 100) {
+      return NextResponse.json({ error: 'Title must be less than 100 characters' }, { status: 400 });
+    }
+
+    // Prepare update data - only allow specific fields to be updated
+    const allowedFields = [
+      'title',
+      'form_name',
+      'description',
+      'status',
+      'settings',
+      'theme',
+      'sections'
+    ];
+
+    const safeUpdateData: any = {
+      updatedAt: new Date()
+    };
+
+    // Only include allowed fields
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        safeUpdateData[key] = updateData[key];
+      }
+    });
+
+    // Trim string fields
+    if (safeUpdateData.title) safeUpdateData.title = safeUpdateData.title.trim();
+    if (safeUpdateData.form_name) safeUpdateData.form_name = safeUpdateData.form_name.trim();
+    if (safeUpdateData.description) safeUpdateData.description = safeUpdateData.description.trim();
+
+    const form = await Form.findByIdAndUpdate(
+      formId, 
+      safeUpdateData,
+      { 
+        new: true, // Return updated document
+        runValidators: true // Run schema validators
+      }
+    );
+
     return NextResponse.json({ 
       success: true, 
-      form,
+      form: {
+        _id: form._id,
+        title: form.title,
+        form_name: form.form_name,
+        description: form.description,
+        status: form.status,
+        createdAt: form.createdAt,
+        updatedAt: form.updatedAt,
+        settings: form.settings,
+        createdBy: form.createdBy
+      },
       message: 'Form updated successfully'
     });
 
   } catch (error) {
     console.error('Form update error:', error);
+    
+    // Handle mongoose validation errors
+    if (error instanceof mongoose.Error.ValidationError) {
+      const errors = Object.values(error.errors).map((err: any) => err.message);
+      return NextResponse.json({ 
+        error: 'Validation failed',
+        details: errors
+      }, { status: 400 });
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return NextResponse.json({ 
+        error: 'Form with this name already exists'
+      }, { status: 400 });
+    }
+
     return NextResponse.json({ 
       error: 'Failed to update form',
       details: error instanceof Error ? error.message : 'Unknown error'
