@@ -1,184 +1,127 @@
-// app/api/admin/responses/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
-import dbConnect from '@/lib/mongodb';
-import FormResponse from '@/models/FormResponse';
+import mongoose from 'mongoose';
 import Form from '@/models/Form';
+import LeadResponse from '@/models/LeadResponse';
+import SwayamsevakResponse from '@/models/SwayamsevakResponse';
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
-    
-    const token = request.cookies.get('token')?.value;
-    if (!token) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    console.log('🔄 Starting to fetch responses...');
+
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI!);
     }
 
-    // Just verify the token - any authenticated admin can see all responses
-    await verifyToken(token);
+    // Fetch all forms first
+    const forms = await Form.find({})
+      .select('_id title form_name12 sections settings.userType')
+      .lean();
 
-    // Get ALL forms (no filtering by admin) - INCLUDING form_name12
-    const allForms = await Form.find({}).select('_id title form_name12 sections settings').lean();
-    const allFormIds = allForms.map(form => form._id.toString());
+    console.log(`📋 Found ${forms.length} forms`);
 
-    console.log(`📋 Found ${allForms.length} total forms`);
+    // Fetch responses from BOTH collections
+    const [leadResponses, swayamsevakResponses] = await Promise.all([
+      LeadResponse.find({})
+        .populate('formId', 'title form_name12')
+        .sort({ submittedAt: -1 })
+        .lean(),
+      SwayamsevakResponse.find({})
+        .populate('formId', 'title form_name12')
+        .sort({ submittedAt: -1 })
+        .lean()
+    ]);
 
-    // Get responses for ALL forms
-    const responses = await FormResponse.find({
-      formId: { $in: allFormIds }
-    })
-    .sort({ submittedAt: -1 })
-    .limit(1000)
-    .lean();
+    console.log(`📥 Lead responses: ${leadResponses.length}`);
+    console.log(`🕉️ Swayamsevak responses: ${swayamsevakResponses.length}`);
 
-    console.log(`📦 Found ${responses.length} responses from all forms`);
-
-    // Create a field map for each form to get proper labels
-    const formFieldMaps = new Map();
-    allForms.forEach(form => {
-      const fieldMap = new Map();
-      form.sections?.forEach(section => {
-        section.fields?.forEach(field => {
-          fieldMap.set(field.id, {
-            label: field.label,
-            type: field.type
-          });
-          // Add Sangha hierarchy fields
-          if (field.type === 'sangha') {
-            fieldMap.set(`${field.id}-vibhaag`, {
-              label: `${field.label} - Vibhaag`,
-              type: 'sangha_hierarchy'
-            });
-            fieldMap.set(`${field.id}-khanda`, {
-              label: `${field.label} - Khanda`,
-              type: 'sangha_hierarchy'
-            });
-            fieldMap.set(`${field.id}-valaya`, {
-              label: `${field.label} - Valaya`,
-              type: 'sangha_hierarchy'
-            });
-            fieldMap.set(`${field.id}-milan`, {
-              label: `${field.label} - Milan`,
-              type: 'sangha_hierarchy'
-            });
-          }
-        });
-      });
-      formFieldMaps.set(form._id.toString(), fieldMap);
-    });
-
-    // Transform responses to include proper field labels and organize data
-    const transformedResponses = responses.map(response => {
-      const form = allForms.find(f => f._id.toString() === response.formId.toString());
-      const fieldMap = formFieldMaps.get(response.formId.toString()) || new Map();
+    // Process lead responses
+    const processedLeadResponses = leadResponses.map(response => {
+      const form = forms.find(f => f._id.toString() === response.formId?._id?.toString());
       
-      // Group responses by field and handle Sangha hierarchy
-      const organizedResponses: any = {};
-      const sanghaGroups = new Map();
-
-      response.responses.forEach((resp: any) => {
-        const fieldInfo = fieldMap.get(resp.fieldId);
-        const label = fieldInfo?.label || resp.fieldLabel || resp.fieldId;
-        
-        // Handle Sangha hierarchy fields
-        if (resp.fieldId.includes('-vibhaag') || resp.fieldId.includes('-khanda') || 
-            resp.fieldId.includes('-valaya') || resp.fieldId.includes('-milan')) {
-          
-          const baseFieldId = resp.fieldId.split('-')[0];
-          if (!sanghaGroups.has(baseFieldId)) {
-            sanghaGroups.set(baseFieldId, {
-              vibhaag: '',
-              khanda: '',
-              valaya: '',
-              milan: ''
-            });
-          }
-          
-          const sanghaData = sanghaGroups.get(baseFieldId);
-          if (resp.fieldId.includes('-vibhaag')) {
-            sanghaData.vibhaag = resp.value;
-          } else if (resp.fieldId.includes('-khanda')) {
-            sanghaData.khanda = resp.value;
-          } else if (resp.fieldId.includes('-valaya')) {
-            sanghaData.valaya = resp.value;
-          } else if (resp.fieldId.includes('-milan')) {
-            sanghaData.milan = resp.value;
-          }
-        } else {
-          // Regular fields
-          organizedResponses[resp.fieldId] = {
-            label,
+      // Create a proper responses object
+      const responsesObj: any = {};
+      if (response.responses && Array.isArray(response.responses)) {
+        response.responses.forEach((resp: any) => {
+          responsesObj[resp.fieldId] = {
+            label: resp.fieldLabel || 'Unknown Field',
             value: resp.value,
-            type: fieldInfo?.type || resp.fieldType
+            type: resp.fieldType || 'text'
           };
-        }
-      });
-
-      // Add Sangha hierarchy data to organized responses
-      sanghaGroups.forEach((sanghaData, baseFieldId) => {
-        const fieldInfo = fieldMap.get(baseFieldId);
-        organizedResponses[baseFieldId] = {
-          label: fieldInfo?.label || baseFieldId,
-          value: `${sanghaData.vibhaag} > ${sanghaData.khanda} > ${sanghaData.valaya} > ${sanghaData.milan}`,
-          type: 'sangha_hierarchy',
-          details: sanghaData
-        };
-      });
-
-      // Handle special fields like opt-ins
-      const specialFields = {
-        whatsapp_optin_consent: {
-          label: 'WhatsApp Consent',
-          type: 'consent'
-        },
-        arratai_optin_consent: {
-          label: 'Arratai Consent', 
-          type: 'consent'
-        }
-      };
-
-      Object.keys(specialFields).forEach(fieldId => {
-        const specialResp = response.responses.find((r: any) => r.fieldId === fieldId);
-        if (specialResp) {
-          organizedResponses[fieldId] = {
-            label: specialFields[fieldId as keyof typeof specialFields].label,
-            value: specialResp.value === 'agreed' ? 'Yes' : 'No',
-            type: specialFields[fieldId as keyof typeof specialFields].type
-          };
-        }
-      });
+        });
+      }
 
       return {
-        _id: response._id,
-        formId: response.formId.toString(),
-        formTitle: form?.title || 'Unknown Form',
-        formName: form?.form_name12 || form?.title || 'Unknown Form', // ADDED: Include form_name12
-        formType: response.formType,
-        collection: response.collection,
-        submittedAt: response.submittedAt,
-        ipAddress: response.ipAddress,
-        userAgent: response.userAgent,
-        responses: organizedResponses,
-        // Raw responses for debugging
-        rawResponses: response.responses
+        _id: response._id?.toString(),
+        formId: response.formId?._id?.toString(),
+        formTitle: response.formTitle || response.formId?.title || 'Unknown Form',
+        formName: response.formId?.form_name12 || response.formId?.title || 'Unknown Form',
+        formType: 'lead',
+        collection: 'leads',
+        submittedAt: response.submittedAt || response.createdAt,
+        ipAddress: response.ipAddress || 'unknown',
+        userAgent: response.userAgent || 'unknown',
+        responses: responsesObj,
+        rawResponses: response.responses || []
       };
     });
 
-    return NextResponse.json({ 
+    // Process swayamsevak responses
+    const processedSwayamsevakResponses = swayamsevakResponses.map(response => {
+      const form = forms.find(f => f._id.toString() === response.formId?._id?.toString());
+      
+      // Create a proper responses object
+      const responsesObj: any = {};
+      if (response.responses && Array.isArray(response.responses)) {
+        response.responses.forEach((resp: any) => {
+          responsesObj[resp.fieldId] = {
+            label: resp.fieldLabel || 'Unknown Field',
+            value: resp.value,
+            type: resp.fieldType || 'text'
+          };
+        });
+      }
+
+      return {
+        _id: response._id?.toString(),
+        formId: response.formId?._id?.toString(),
+        formTitle: response.formTitle || response.formId?.title || 'Unknown Form',
+        formName: response.formId?.form_name12 || response.formId?.title || 'Unknown Form',
+        formType: 'swayamsevak',
+        collection: 'swayamsevak',
+        submittedAt: response.submittedAt || response.createdAt,
+        ipAddress: response.ipAddress || 'unknown',
+        userAgent: response.userAgent || 'unknown',
+        responses: responsesObj,
+        rawResponses: response.responses || []
+      };
+    });
+
+    // Combine all responses
+    const allResponses = [...processedLeadResponses, ...processedSwayamsevakResponses];
+    
+    console.log(`🎯 Total responses fetched: ${allResponses.length}`);
+
+    return NextResponse.json({
       success: true,
-      responses: transformedResponses,
-      forms: allForms.map(form => ({
-        _id: form._id,
+      responses: allResponses,
+      forms: forms.map(form => ({
+        _id: form._id.toString(),
         title: form.title,
-        form_name12: form.form_name12, // ADDED: Include form_name12 in forms list
-        sections: form.sections
+        form_name12: form.form_name12,
+        sections: form.sections || [],
+        userType: form.settings?.userType || 'swayamsevak'
       }))
     });
 
-  } catch (error: any) {
-    console.error('❌ Get responses error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error: ' + error.message 
-    }, { status: 500 });
+  } catch (error) {
+    console.error('❌ Error fetching responses:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to fetch responses',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }

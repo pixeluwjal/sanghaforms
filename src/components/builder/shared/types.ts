@@ -25,6 +25,7 @@ export interface Field {
   required: boolean;
   options?: string[]; // For select, radio, checkbox
   order: number;
+  defaultValue?: string;
   conditionalRules: ConditionalRule[];
   // Additional properties for specific field types
   validation?: {
@@ -44,6 +45,7 @@ export interface Section {
   order: number;
   fields: Field[];
   conditionalRules: SectionConditionalRule[];
+  defaultValue?: string; // Add this line
 }
 
 // Theme Types

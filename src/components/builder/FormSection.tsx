@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Type, GripVertical, ArrowUp, ArrowDown, Settings } from 'lucide-react';
+import { Trash2, Type, GripVertical, ArrowUp, ArrowDown, Settings, ChevronDown, Eye } from 'lucide-react';
 import { Section, Field } from './shared/types';
 import { FormField } from './FormField';
 
@@ -38,6 +38,7 @@ export const FormSection = ({
   sectionIndex = 0,
   totalSections = 1,
 }: FormSectionProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showPositionControls, setShowPositionControls] = useState(false);
 
   // Field reordering functions
@@ -77,16 +78,16 @@ export const FormSection = ({
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+    <div className="bg-white rounded-2xl border-2 border-purple-200 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl">
       {/* Section Header */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 border-b border-purple-200/50">
+      <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-6 border-b border-purple-200">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="flex-1 space-y-4">
             {/* Section Title and Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               {/* Position Indicator and Controls */}
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-white px-3 py-1 rounded-full border border-purple-200 shadow-sm">
+                <div className="flex items-center gap-1 bg-white px-3 py-1 rounded-full border-2 border-purple-300 shadow-sm">
                   <span className="text-sm font-bold text-purple-700">#{sectionIndex + 1}</span>
                   
                   {/* Section Move Buttons */}
@@ -113,30 +114,43 @@ export const FormSection = ({
                   </div>
                 </div>
 
+                {/* Expand/Collapse Button */}
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors"
+                  title={isExpanded ? "Collapse settings" : "Expand settings"}
+                >
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
                 {/* Position Input */}
                 <div className="relative">
                   <button
                     onClick={() => setShowPositionControls(!showPositionControls)}
-                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-1 px-3 py-1 bg-white border-2 border-purple-300 rounded-lg text-sm text-purple-600 hover:bg-purple-50 transition-colors"
                   >
                     <Settings className="w-3 h-3" />
                     <span>Position</span>
                   </button>
 
                   {showPositionControls && (
-                    <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-3 min-w-48">
+                    <div className="absolute top-full left-0 mt-2 bg-white border-2 border-purple-300 rounded-lg shadow-lg z-10 p-3 min-w-48">
                       <div className="flex items-center gap-2 mb-2">
-                        <label className="text-sm font-medium text-gray-700">Set position:</label>
+                        <label className="text-sm font-medium text-black">Set position:</label>
                         <input
                           type="number"
                           min="1"
                           max={totalSections}
                           defaultValue={sectionIndex + 1}
                           onChange={(e) => handlePositionChange(parseInt(e.target.value))}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-16 px-2 py-1 border-2 border-purple-300 rounded text-sm text-black"
                         />
                       </div>
-                      <p className="text-xs text-gray-500">Enter position 1-{totalSections}</p>
+                      <p className="text-xs text-gray-600">Enter position 1-{totalSections}</p>
                     </div>
                   )}
                 </div>
@@ -147,7 +161,7 @@ export const FormSection = ({
                 type="text"
                 value={section.title}
                 onChange={(e) => onUpdate(section.id, { title: e.target.value })}
-                className="flex-1 bg-transparent border-none text-2xl lg:text-3xl font-bold text-gray-800 focus:outline-none focus:ring-0 placeholder-gray-400 min-w-0"
+                className="flex-1 bg-transparent border-none text-2xl lg:text-3xl font-bold text-black focus:outline-none focus:ring-0 placeholder-gray-500 min-w-0"
                 placeholder="Section Title"
               />
             </div>
@@ -156,29 +170,36 @@ export const FormSection = ({
             <textarea
               value={section.description}
               onChange={(e) => onUpdate(section.id, { description: e.target.value })}
-              className="w-full bg-white/70 border border-gray-300/50 rounded-xl text-gray-600 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 p-4 resize-none text-base lg:text-lg"
+              className="w-full bg-white border-2 border-purple-300 rounded-xl text-black focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 p-4 resize-none text-base lg:text-lg"
               placeholder="Section description (optional)"
               rows={2}
             />
 
             {/* Section Stats and Actions */}
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600 bg-white/80 px-3 py-1 rounded-full border border-gray-200">
-                <Type className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-sm text-black bg-white px-3 py-1 rounded-full border-2 border-purple-300">
+                <Type className="w-4 h-4 text-purple-600" />
                 <span>{section.fields.length} field{section.fields.length !== 1 ? 's' : ''}</span>
               </div>
 
               {section.conditionalRules && section.conditionalRules.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-full border border-orange-200">
+                <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full border-2 border-purple-300">
                   <Settings className="w-3 h-3" />
                   <span>{section.conditionalRules.length} conditional rule{section.conditionalRules.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+
+              {/* Section Default Value Badge */}
+              {section.defaultValue && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full border-2 border-green-300">
+                  <span>Default: {section.defaultValue}</span>
                 </div>
               )}
 
               {/* Section Conditional Logic Button */}
               <button
                 onClick={() => onEditSectionConditional(section)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold text-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold text-sm"
               >
                 <Settings className="w-4 h-4" />
                 Section Rules
@@ -189,7 +210,7 @@ export const FormSection = ({
           {/* Delete Section Button */}
           <button
             onClick={() => onDelete(section.id)}
-            className="p-3 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 hover:text-red-700 transition-all duration-300 hover:scale-110 self-start lg:self-center"
+            className="p-3 bg-red-100 hover:bg-red-200 rounded-xl text-red-600 hover:text-red-700 transition-all duration-300 hover:scale-110 self-start lg:self-center border-2 border-red-300"
             title="Delete Section"
           >
             <Trash2 className="w-5 h-5" />
@@ -197,8 +218,112 @@ export const FormSection = ({
         </div>
       </div>
 
+      {/* Section Configuration Panel */}
+      {isExpanded && (
+        <div className="p-6 bg-gradient-to-br from-purple-50 to-white border-b border-purple-200">
+          <h3 className="text-lg font-semibold text-black mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-purple-600" />
+            Section Configuration
+          </h3>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Section Title */}
+            <div>
+              <label className="block text-sm font-semibold text-black mb-2">
+                Section Title
+              </label>
+              <input
+                type="text"
+                value={section.title}
+                onChange={(e) => onUpdate(section.id, { title: e.target.value })}
+                className="w-full border-2 border-purple-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-lg font-bold text-black"
+                placeholder="Section title"
+              />
+            </div>
+
+            {/* Section Default Value */}
+            <div>
+              <label className="block text-sm font-semibold text-black mb-2">
+                Section Default Value
+              </label>
+              <input
+                type="text"
+                value={section.defaultValue || ''}
+                onChange={(e) => onUpdate(section.id, { defaultValue: e.target.value })}
+                className="w-full border-2 border-purple-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black"
+                placeholder="Default value for this section"
+              />
+              <p className="text-xs text-gray-600 mt-2">
+                This value can be used for conditional logic or pre-filling section data
+              </p>
+            </div>
+
+            {/* Section Description */}
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-semibold text-black mb-2">
+                Section Description
+              </label>
+              <textarea
+                value={section.description}
+                onChange={(e) => onUpdate(section.id, { description: e.target.value })}
+                className="w-full border-2 border-purple-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none text-black"
+                placeholder="Section description (optional)"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          {/* Quick Default Value Options */}
+          <div className="mt-6 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
+            <label className="block text-sm font-semibold text-purple-700 mb-3">
+              Quick Default Values
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {[
+                "personal_info",
+                "contact_details", 
+                "sangha_info",
+                "preferences",
+                "additional_info",
+                "basic_info",
+                "education",
+                "employment",
+                "family_info",
+                "medical_info",
+                "emergency_contact",
+                "custom_section"
+              ].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onUpdate(section.id, { defaultValue: option })}
+                  className={`px-3 py-2 text-sm rounded-lg border-2 transition-all duration-200 ${
+                    section.defaultValue === option
+                      ? 'bg-purple-600 text-white border-purple-600 shadow-md'
+                      : 'bg-white text-black border-purple-300 hover:bg-purple-50 hover:border-purple-400'
+                  }`}
+                >
+                  {option.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Conditional Logic Button */}
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => onEditSectionConditional(section)}
+              className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold"
+            >
+              <Eye className="w-5 h-5" />
+              Configure Section Conditional Logic
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Fields Container */}
-      <div className="p-6 bg-gradient-to-br from-gray-50/50 to-white/30">
+      <div className="p-6 bg-gradient-to-br from-purple-50 to-white">
         <div className="space-y-4">
           {section.fields.map((field, index) => (
             <FormField
@@ -217,26 +342,26 @@ export const FormSection = ({
           ))}
           
           {section.fields.length === 0 && (
-            <div className="text-center py-16 border-3 border-dashed border-gray-300/50 rounded-2xl bg-gradient-to-br from-white to-gray-50/50">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                <Type className="w-10 h-10 text-purple-500" />
+            <div className="text-center py-16 border-3 border-dashed border-purple-300 rounded-2xl bg-gradient-to-br from-white to-purple-50">
+              <div className="w-20 h-20 bg-gradient-to-r from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <Type className="w-10 h-10 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              <h3 className="text-xl font-semibold text-black mb-2">
                 No fields yet
               </h3>
-              <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
                 Start building your form by adding fields from the toolbox
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
                   onClick={() => onAddField(section.id, 'text')}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Add Text Field
                 </button>
                 <button
                   onClick={() => onAddField(section.id, 'select')}
-                  className="px-6 py-3 bg-white border-2 border-purple-200 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300"
+                  className="px-6 py-3 bg-white border-2 border-purple-300 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300"
                 >
                   Add Dropdown
                 </button>
@@ -247,8 +372,8 @@ export const FormSection = ({
 
         {/* Quick Add Fields */}
         {section.fields.length > 0 && (
-          <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-200/50">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+          <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl border-2 border-purple-300">
+            <h4 className="text-lg font-semibold text-black mb-4 text-center">
               Quick Add Fields
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -256,7 +381,7 @@ export const FormSection = ({
                 <button
                   key={type}
                   onClick={() => onAddField(section.id, type)}
-                  className="p-3 bg-white border border-gray-200 rounded-xl text-gray-700 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition-all duration-300 text-sm font-medium"
+                  className="p-3 bg-white border-2 border-purple-300 rounded-xl text-black hover:border-purple-400 hover:bg-purple-50 hover:text-purple-700 transition-all duration-300 text-sm font-medium"
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </button>

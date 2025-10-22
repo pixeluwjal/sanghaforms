@@ -1,24 +1,20 @@
-// app/api/sources/route.ts
+// app/api/admin/sources/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Source from '@/models/Source';
 
-// GET - Fetch all active sources
+// GET - Fetch all sources for admin (including inactive)
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     
-    const sources = await Source.find({ isActive: true })
+    const sources = await Source.find()
       .sort({ order: 1, name: 1 })
-      .select('name description')
       .lean();
     
-    // Return just the names array for compatibility with existing code
-    const sourceNames = sources.map(source => source.name);
-    
-    return NextResponse.json(sourceNames);
+    return NextResponse.json(sources);
   } catch (error) {
-    console.error('Error fetching sources:', error);
+    console.error('Error fetching sources for admin:', error);
     return NextResponse.json(
       { error: 'Failed to fetch sources' },
       { status: 500 }
@@ -26,13 +22,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new source (for admin)
+// POST - Create new source
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
     
     const body = await request.json();
-    const { name, description, order = 0 } = body;
+    const { name, description, order = 0, isActive = true } = body;
     
     if (!name) {
       return NextResponse.json(
@@ -52,7 +48,8 @@ export async function POST(request: NextRequest) {
     const source = new Source({
       name,
       description,
-      order
+      order,
+      isActive
     });
     
     await source.save();

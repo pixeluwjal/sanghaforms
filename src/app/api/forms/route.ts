@@ -175,7 +175,8 @@ export async function PUT(request: NextRequest) {
       'status',
       'settings',
       'theme',
-      'sections'
+      'sections',
+      'images' // FIXED: Added missing comma
     ];
 
     const safeUpdateData: any = {
@@ -214,6 +215,9 @@ export async function PUT(request: NextRequest) {
         createdAt: form.createdAt,
         updatedAt: form.updatedAt,
         settings: form.settings,
+        theme: form.theme,
+        images: form.images, // Include images in response
+        sections: form.sections,
         createdBy: form.createdBy
       },
       message: 'Form updated successfully'

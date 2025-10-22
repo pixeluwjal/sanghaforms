@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Eye,
 } from "lucide-react";
 
 interface FormBuilderProps {
@@ -30,84 +31,72 @@ const FIELD_TYPES = [
     type: "text",
     label: "Text Input",
     icon: "Type",
-    color: "blue",
     supportsOptions: false,
   },
   {
     type: "email",
     label: "Email",
     icon: "Mail",
-    color: "green",
     supportsOptions: false,
   },
   {
     type: "number",
     label: "Number",
     icon: "Hash",
-    color: "purple",
     supportsOptions: false,
   },
   {
     type: "textarea",
     label: "Text Area",
     icon: "FileText",
-    color: "indigo",
     supportsOptions: false,
   },
   {
     type: "select",
     label: "Dropdown",
     icon: "List",
-    color: "orange",
     supportsOptions: true,
   },
   {
     type: "radio",
     label: "Radio Group",
     icon: "Circle",
-    color: "pink",
     supportsOptions: true,
   },
   {
     type: "checkbox",
     label: "Checkboxes",
     icon: "Square",
-    color: "red",
     supportsOptions: true,
   },
   {
     type: "date",
     label: "Date Picker",
     icon: "Calendar",
-    color: "teal",
     supportsOptions: false,
   },
   {
     type: "file",
     label: "File Upload",
     icon: "Upload",
-    color: "amber",
     supportsOptions: false,
   },
   {
     type: "sangha",
     label: "Sangha Hierarchy",
     icon: "Users",
-    color: "purple",
     supportsOptions: false,
   },
   {
     type: "whatsapp_optin",
     label: "WhatsApp Opt-in",
     icon: "MessageCircle",
-    color: "emerald",
     supportsOptions: false,
   },
   {
     type: "arratai_optin",
     label: "Arratai Opt-in",
     icon: "Users",
-    color: "sky",
     supportsOptions: false,
   },
 ];
@@ -170,7 +159,9 @@ const addNestedFieldRecursively = (
   });
 };
 
-// Image Upload Component
+// Image Upload Component - FIXED VERSION
+// components/builder/FormBuilder.tsx - ImageUpload component
+// components/builder/FormBuilder.tsx - ImageUpload component
 const ImageUpload: React.FC<{
   type: "logo" | "banner";
   currentImage?: string;
@@ -201,22 +192,28 @@ const ImageUpload: React.FC<{
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("type", type);
 
-      const response = await fetch("/api/upload/cloudinary", {
-        method: "POST",
+      // Use your Cloudinary upload API route
+      const response = await fetch('/api/upload/cloudinary', {
+        method: 'POST',
         body: formData,
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
+      }
+
       const result = await response.json();
 
-      if (result.success) {
-        onImageUpload(result.url);
+      if (result.success && result.url) {
+        console.log('✅ Image uploaded successfully:', result.url);
+        onImageUpload(result.url); // This should save to the form
       } else {
-        alert("Upload failed: " + result.error);
+        throw new Error('Upload failed: No URL returned');
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      console.error("❌ Upload error:", error);
       alert("Upload failed. Please try again.");
     } finally {
       setUploading(false);
@@ -250,14 +247,14 @@ const ImageUpload: React.FC<{
 
   return (
     <div className={`${className}`}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-black mb-2">
         {label}
       </label>
 
       {currentImage ? (
         <div className="relative group">
           <div
-            className={`${dimensions} border-2 border-dashed border-gray-300 rounded-lg overflow-hidden`}
+            className={`${dimensions} border-2 border-dashed border-purple-300 rounded-lg overflow-hidden`}
           >
             <img
               src={currentImage}
@@ -274,7 +271,7 @@ const ImageUpload: React.FC<{
           <div className="mt-2 text-center">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-sm text-purple-600 hover:text-purple-700"
             >
               Change {label}
             </button>
@@ -283,9 +280,9 @@ const ImageUpload: React.FC<{
       ) : (
         <div
           className={`${dimensions} border-2 border-dashed ${
-            dragOver ? "border-blue-500 bg-blue-50" : "border-gray-300"
+            dragOver ? "border-purple-500 bg-purple-50" : "border-purple-300"
           } rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
-            uploading ? "opacity-50" : "hover:border-gray-400"
+            uploading ? "opacity-50" : "hover:border-purple-400"
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -294,16 +291,16 @@ const ImageUpload: React.FC<{
         >
           {uploading ? (
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Uploading...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="text-sm text-gray-600 mt-2">Uploading...</p>
             </div>
           ) : (
             <>
-              <Upload className="w-8 h-8 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600 text-center">
+              <Upload className="w-8 h-8 text-purple-400 mb-2" />
+              <p className="text-sm text-black text-center">
                 Drag & drop or click to upload
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 PNG, JPG, GIF up to 5MB
               </p>
             </>
@@ -321,6 +318,63 @@ const ImageUpload: React.FC<{
     </div>
   );
 };
+// Preview Component for Default Values
+const DefaultValuePreview: React.FC<{
+  section: Section;
+  onUpdate: (sectionId: string, updates: Partial<Section>) => void;
+}> = ({ section, onUpdate }) => {
+  return (
+    <div className="mt-4 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
+      <h4 className="text-lg font-semibold text-black mb-3 flex items-center gap-2">
+        <Eye className="w-5 h-5 text-purple-600" />
+        Default Value Preview
+      </h4>
+      
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-black mb-1">
+            Section Default Value
+          </label>
+          <input
+            type="text"
+            value={section.defaultValue || ''}
+            onChange={(e) => onUpdate(section.id, { defaultValue: e.target.value })}
+            className="w-full border-2 border-purple-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            placeholder="Enter section default value"
+          />
+        </div>
+
+        {/* Field Default Values Preview */}
+        {section.fields.length > 0 && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-black mb-2">
+              Field Default Values
+            </label>
+            <div className="space-y-2">
+              {section.fields.map((field) => (
+                <div key={field.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-purple-200">
+                  <span className="text-sm font-medium text-black flex-1">
+                    {field.label}
+                  </span>
+                  <input
+                    type="text"
+                    value={field.defaultValue || ''}
+                    onChange={(e) => {
+                      // This would need to be connected to field update
+                      console.log(`Update field ${field.id} default value:`, e.target.value);
+                    }}
+                    className="flex-1 border border-purple-300 rounded px-2 py-1 text-sm text-black"
+                    placeholder={`Default ${field.type} value`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
   const [editingField, setEditingField] = useState<Field | null>(null);
@@ -329,49 +383,48 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Helper functions
- // In FormBuilder.tsx, update the createNewField function:
-const createNewField = (type: string, label?: string): Field => {
-  const fieldConfig = FIELD_TYPES.find((f) => f.type === type);
-  const defaultLabel = label || (fieldConfig ? fieldConfig.label : "Field");
+  const createNewField = (type: string, label?: string): Field => {
+    const fieldConfig = FIELD_TYPES.find((f) => f.type === type);
+    const defaultLabel = label || (fieldConfig ? fieldConfig.label : "Field");
 
-  const baseField = {
-    id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    type: type as any,
-    label: defaultLabel,
-    placeholder: `Enter ${defaultLabel.toLowerCase()}`,
-    required: false,
-    order: 0,
-    conditionalRules: [],
-    nestedFields: [],
+    const baseField = {
+      id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: type as any,
+      label: defaultLabel,
+      placeholder: `Enter ${defaultLabel.toLowerCase()}`,
+      required: false,
+      order: 0,
+      conditionalRules: [],
+      nestedFields: [],
+    };
+
+    // Handle specific field types
+    if (type === 'readonly_text') {
+      return {
+        ...baseField,
+        defaultValue: 'Default Value',
+      };
+    }
+
+    if (type === 'source') {
+      return {
+        ...baseField,
+        options: ["Mane Mane Samparka", "Street Samparka"],
+      };
+    }
+
+    if (fieldConfig && fieldConfig.supportsOptions) {
+      return {
+        ...baseField,
+        options: ["Option 1", "Option 2"],
+      };
+    }
+
+    return baseField;
   };
-
-  // Handle specific field types
-  if (type === 'readonly_text') {
-    return {
-      ...baseField,
-      defaultValue: 'Default Value', // Set initial default value
-    };
-  }
-
-  if (type === 'source') {
-    return {
-      ...baseField,
-      options: ["Mane Mane Samparka", "Street Samparka"], // Set initial options
-    };
-  }
-
-  // For other field types that support options
-  if (fieldConfig && fieldConfig.supportsOptions) {
-    return {
-      ...baseField,
-      options: ["Option 1", "Option 2"],
-    };
-  }
-
-  return baseField;
-};
 
   const createNewSection = (title?: string): Section => {
     return {
@@ -381,6 +434,7 @@ const createNewField = (type: string, label?: string): Field => {
       order: form.sections.length,
       fields: [],
       conditionalRules: [],
+      defaultValue: "",
     };
   };
 
@@ -392,41 +446,170 @@ const createNewField = (type: string, label?: string): Field => {
   };
 
   // Image handlers
-  const handleLogoUpload = (url: string) => {
-    updateForm({
+ const handleLogoUpload = async (url: string) => {
+  try {
+    console.log('🔄 Saving logo to database:', url);
+    
+    // Update local state immediately for better UX
+    const updatedForm = {
+      ...form,
       images: {
         ...form.images,
         logo: url,
       },
+    };
+    
+    // Update parent component
+    updateForm(updatedForm);
+    
+    // Save to database via API
+    const response = await fetch('/api/forms', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        formId: form._id,
+        images: {
+          ...form.images,
+          logo: url,
+        }
+      }),
     });
-  };
 
-  const handleLogoRemove = () => {
-    updateForm({
+    if (!response.ok) {
+      throw new Error('Failed to save logo to database');
+    }
+
+    console.log('✅ Logo saved to database successfully');
+  } catch (error) {
+    console.error('❌ Error saving logo to database:', error);
+    alert('Logo uploaded but failed to save. Please try again.');
+  }
+};
+
+const handleLogoRemove = async () => {
+  try {
+    console.log('🔄 Removing logo from database');
+    
+    // Update local state immediately
+    const updatedForm = {
+      ...form,
       images: {
         ...form.images,
         logo: "",
       },
+    };
+    
+    updateForm(updatedForm);
+    
+    // Save to database via API
+    const response = await fetch('/api/forms', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        formId: form._id,
+        images: {
+          ...form.images,
+          logo: "",
+        }
+      }),
     });
-  };
 
-  const handleBannerUpload = (url: string) => {
-    updateForm({
+    if (!response.ok) {
+      throw new Error('Failed to remove logo from database');
+    }
+
+    console.log('✅ Logo removed from database successfully');
+  } catch (error) {
+    console.error('❌ Error removing logo from database:', error);
+    alert('Failed to remove logo. Please try again.');
+  }
+};
+const handleBannerUpload = async (url: string) => {
+  try {
+    console.log('🔄 Saving banner to database:', url);
+    
+    // Update local state immediately
+    const updatedForm = {
+      ...form,
       images: {
         ...form.images,
         banner: url,
       },
+    };
+    
+    updateForm(updatedForm);
+    
+    // Save to database via API
+    const response = await fetch('/api/forms', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        formId: form._id,
+        images: {
+          ...form.images,
+          banner: url,
+        }
+      }),
     });
-  };
 
-  const handleBannerRemove = () => {
-    updateForm({
+    if (!response.ok) {
+      throw new Error('Failed to save banner to database');
+    }
+
+    console.log('✅ Banner saved to database successfully');
+  } catch (error) {
+    console.error('❌ Error saving banner to database:', error);
+    alert('Banner uploaded but failed to save. Please try again.');
+  }
+};
+
+
+const handleBannerRemove = async () => {
+  try {
+    console.log('🔄 Removing banner from database');
+    
+    // Update local state immediately
+    const updatedForm = {
+      ...form,
       images: {
         ...form.images,
         banner: "",
       },
+    };
+    
+    updateForm(updatedForm);
+    
+    // Save to database via API
+    const response = await fetch('/api/forms', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        formId: form._id,
+        images: {
+          ...form.images,
+          banner: "",
+        }
+      }),
     });
-  };
+
+    if (!response.ok) {
+      throw new Error('Failed to remove banner from database');
+    }
+
+    console.log('✅ Banner removed from database successfully');
+  } catch (error) {
+    console.error('❌ Error removing banner from database:', error);
+    alert('Failed to remove banner. Please try again.');
+  }
+};
 
   // Field and section handlers
   const addFieldToSection = (sectionId: string, fieldType: string) => {
@@ -665,7 +848,7 @@ const createNewField = (type: string, label?: string): Field => {
   const currentSection = form.sections[currentSectionIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100">
       <div className="container mx-auto px-4 py-6">
         {/* Mobile Sidebar Overlay */}
         {mobileSidebarOpen && (
@@ -682,25 +865,32 @@ const createNewField = (type: string, label?: string): Field => {
             <div className="lg:hidden flex items-center">
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="p-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors"
               >
                 <Menu className="w-5 h-5" />
               </button>
             </div>
 
             <div className="flex-1 text-center">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
                 Form Builder
               </h1>
-              <p className="text-gray-600 mt-2 text-sm sm:text-base lg:text-lg">
+              <p className="text-black mt-2 text-sm sm:text-base lg:text-lg">
                 Build your form by adding fields and sections
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-sm"
+              >
+                <Eye className="w-4 h-4" />
+                <span className="hidden sm:inline">Preview</span>
+              </button>
+              <button
                 onClick={() => setShowImageSettings(!showImageSettings)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-sm"
               >
                 <ImageIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Images</span>
@@ -710,7 +900,7 @@ const createNewField = (type: string, label?: string): Field => {
 
           {/* Banner Preview */}
           {form.images?.banner && (
-            <div className="mt-4 rounded-xl overflow-hidden shadow-lg">
+            <div className="mt-4 rounded-xl overflow-hidden shadow-lg border-2 border-purple-300">
               <img
                 src={form.images.banner}
                 alt="Form Banner"
@@ -721,12 +911,12 @@ const createNewField = (type: string, label?: string): Field => {
 
           {/* Image Settings Panel */}
           {showImageSettings && (
-            <div className="fixed sm:absolute top-1/2 left-1/2 sm:top-full sm:left-auto sm:right-0 mt-2 w-[90vw] sm:w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 transform -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0">
+            <div className="fixed sm:absolute top-1/2 left-1/2 sm:top-full sm:left-auto sm:right-0 mt-2 w-[90vw] sm:w-80 bg-white border-2 border-purple-300 rounded-xl shadow-xl z-50 p-4 transform -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-800">Form Images</h3>
+                <h3 className="font-semibold text-black">Form Images</h3>
                 <button
                   onClick={() => setShowImageSettings(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-purple-400 hover:text-purple-600"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -758,21 +948,21 @@ const createNewField = (type: string, label?: string): Field => {
               ? 'fixed inset-y-0 left-0 z-50 w-80 bg-white shadow-xl transform translate-x-0 transition-transform duration-300' 
               : 'fixed -translate-x-full lg:relative lg:translate-x-0'
           }`}>
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto border-2 border-purple-300 rounded-2xl bg-white">
               <FieldToolbox onFieldAdd={handleToolboxFieldAdd} />
             </div>
           </div>
 
           {/* Main Builder Area - Right */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Section Navigation Header - Updated with AI Button */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 shadow-lg">
+            {/* Section Navigation Header */}
+            <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-purple-300 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
+                  <h3 className="text-lg font-semibold text-black">
                     {currentSection ? currentSection.title : "No Sections"}
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-600">
                     {currentSection ? `${currentSection.fields.length} field(s)` : "Add a section to get started"}
                   </p>
                 </div>
@@ -781,14 +971,14 @@ const createNewField = (type: string, label?: string): Field => {
                   {/* AI Generate Button */}
                   <button
                     onClick={() => setShowAIGenerator(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold hover:scale-105"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold hover:scale-105"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span className="hidden sm:inline">AI Generate</span>
                   </button>
 
                   {/* Section Counter */}
-                  <div className="text-sm text-gray-600 font-medium">
+                  <div className="text-sm text-black font-medium">
                     Section {currentSectionIndex + 1} of {form.sections.length}
                   </div>
                   
@@ -797,7 +987,7 @@ const createNewField = (type: string, label?: string): Field => {
                     <button
                       onClick={goToPreviousSection}
                       disabled={currentSectionIndex === 0}
-                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -805,7 +995,7 @@ const createNewField = (type: string, label?: string): Field => {
                     <button
                       onClick={goToNextSection}
                       disabled={currentSectionIndex === form.sections.length - 1}
-                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -823,8 +1013,8 @@ const createNewField = (type: string, label?: string): Field => {
                         onClick={() => goToSection(index)}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                           index === currentSectionIndex
-                            ? 'bg-purple-600 text-white shadow-lg'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-purple-600 text-white shadow-lg border-2 border-purple-600'
+                            : 'bg-purple-100 text-black border-2 border-purple-300 hover:bg-purple-200'
                         }`}
                       >
                         {section.title || `Section ${index + 1}`}
@@ -834,6 +1024,14 @@ const createNewField = (type: string, label?: string): Field => {
                 </div>
               )}
             </div>
+
+            {/* Default Value Preview */}
+            {showPreview && currentSection && (
+              <DefaultValuePreview
+                section={currentSection}
+                onUpdate={updateSection}
+              />
+            )}
 
             {/* Current Active Section */}
             {currentSection ? (
@@ -857,12 +1055,12 @@ const createNewField = (type: string, label?: string): Field => {
               />
             ) : (
               /* Empty State */
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-white/20 shadow-lg text-center">
+              <div className="bg-white rounded-2xl p-8 sm:p-12 border-2 border-purple-300 shadow-lg text-center">
                 <div className="max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-300">
                     <Plus className="w-8 h-8 text-purple-600" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  <h3 className="text-xl font-semibold text-black mb-2">
                     No Sections Yet
                   </h3>
                   <p className="text-gray-600 mb-6">
@@ -871,13 +1069,13 @@ const createNewField = (type: string, label?: string): Field => {
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                       onClick={addSection}
-                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                      className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium border-2 border-purple-600"
                     >
                       Create First Section
                     </button>
                     <button
                       onClick={() => setShowAIGenerator(true)}
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium"
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium border-2 border-purple-600"
                     >
                       <Sparkles className="w-4 h-4" />
                       AI Generate
@@ -890,16 +1088,16 @@ const createNewField = (type: string, label?: string): Field => {
             {/* Add Section Button */}
             <button
               onClick={addSection}
-              className="w-full flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white/80 backdrop-blur-sm border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-white hover:border-purple-400 hover:shadow-xl transition-all duration-300 group"
+              className="w-full flex items-center justify-center gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 bg-white border-2 border-dashed border-purple-300 rounded-2xl text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:shadow-xl transition-all duration-300 group"
             >
-              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-blue-200 transition-all duration-300 shadow-inner">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-inner border-2 border-purple-300">
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-purple-600" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-base sm:text-lg lg:text-xl text-gray-800">
+                <div className="font-bold text-base sm:text-lg lg:text-xl text-black">
                   Add New Section
                 </div>
-                <div className="text-purple-500 text-xs sm:text-sm">
+                <div className="text-purple-600 text-xs sm:text-sm">
                   Organize your form into multiple sections
                 </div>
               </div>

@@ -1,4 +1,3 @@
-// app/admin/responses/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,7 +13,13 @@ import {
   RefreshCw,
   FileSpreadsheet,
   Users,
-  Calendar
+  Calendar,
+  UserCheck,
+  User,
+  Edit,
+  Trash2,
+  Upload,
+  Brain
 } from 'lucide-react';
 
 interface FormResponse {
@@ -36,6 +41,20 @@ interface FormResponse {
     };
   };
   rawResponses?: any[];
+  // Lead specific fields
+  leadScore?: number;
+  status?: 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
+  source?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  // Swayamsevak specific fields
+  swayamsevakId?: string;
+  sangha?: string;
+  area?: string;
+  district?: string;
+  state?: string;
+  dateOfBirth?: string;
 }
 
 interface Form {
@@ -49,6 +68,7 @@ interface Form {
       type: string;
     }>;
   }>;
+  userType: string;
 }
 
 interface Organization {
@@ -81,6 +101,14 @@ interface SanghaMapping {
   ghatas: Map<string, { name: string; milanId: string }>;
 }
 
+interface BulkUploadResult {
+  success: number;
+  failed: number;
+  errors: string[];
+  aiUsed?: boolean;
+  collectionType?: string;
+}
+
 export default function ResponsesPage() {
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
@@ -93,7 +121,8 @@ export default function ResponsesPage() {
     ghatas: new Map()
   });
   const [loading, setLoading] = useState(true);
-  const [selectedForm, setSelectedForm] = useState<string>('');
+  const [selectedForm, setSelectedForm] = useState<string>('all');
+  const [selectedCollection, setSelectedCollection] = useState<string>('all');
   const [dateRange, setDateRange] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,7 +130,14 @@ export default function ResponsesPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedResponses, setSelectedResponses] = useState<Set<string>>(new Set());
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [showSubmissionDetails, setShowSubmissionDetails] = useState(false);
+  const [editingResponse, setEditingResponse] = useState<FormResponse | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [useAI, setUseAI] = useState(true);
+  const [targetCollection, setTargetCollection] = useState('auto');
   const itemsPerPage = 25;
 
   useEffect(() => {
@@ -121,7 +157,6 @@ export default function ResponsesPage() {
     setToast({ message, type });
   };
 
-  // Fetch organization data and create mapping
   const fetchOrganizationData = async (): Promise<SanghaMapping> => {
     try {
       const response = await fetch('/api/organization');
@@ -139,31 +174,26 @@ export default function ResponsesPage() {
       };
 
       orgs.forEach(org => {
-        // Map vibhaags
         mapping.vibhaags.set(org._id, org.name);
         
-        // Map khandas
         org.khandas?.forEach(khanda => {
           mapping.khandas.set(khanda._id, {
             name: khanda.name,
             vibhaagId: org._id
           });
           
-          // Map valayas
           khanda.valays?.forEach(valaya => {
             mapping.valayas.set(valaya._id, {
               name: valaya.name,
               khandaId: khanda._id
             });
             
-            // Map milans
             valaya.milans?.forEach(milan => {
               mapping.milans.set(milan._id, {
                 name: milan.name,
                 valayaId: valaya._id
               });
               
-              // Map ghatas
               milan.ghatas?.forEach(ghata => {
                 mapping.ghatas.set(ghata._id, {
                   name: ghata.name,
@@ -191,25 +221,26 @@ export default function ResponsesPage() {
   const fetchData = async () => {
     try {
       console.log('🔄 Fetching responses, forms, and organization data...');
+      setLoading(true);
       setRefreshing(true);
       
-      // Fetch organization data first
       const orgMapping = await fetchOrganizationData();
       setSanghaMapping(orgMapping);
       
-      // Then fetch responses
       const responsesRes = await fetch('/api/admin/responses');
       
       if (responsesRes.ok) {
         const data = await responsesRes.json();
-        console.log('📦 Responses data:', data);
+        console.log('📦 Responses data received:', {
+          totalResponses: data.responses?.length,
+          totalForms: data.forms?.length,
+          collections: [...new Set(data.responses?.map((r: FormResponse) => r.collection))]
+        });
+        
         setResponses(data.responses || []);
         setForms(data.forms || []);
         
-        // Auto-select the first form if available
-        if (data.forms && data.forms.length > 0 && !selectedForm) {
-          setSelectedForm(data.forms[0]._id);
-        }
+        showToast(`Loaded ${data.responses?.length || 0} responses from ${data.forms?.length || 0} forms`);
       } else {
         console.error('❌ Failed to fetch responses');
         showToast('Failed to load responses', 'error');
@@ -223,7 +254,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // Helper function to get Sangha hierarchy names
   const getSanghaName = (id: string, type: 'vibhaag' | 'khanda' | 'valaya' | 'milan' | 'ghata'): string => {
     switch (type) {
       case 'vibhaag':
@@ -241,7 +271,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // Enhanced response formatter to include Sangha names
   const formatResponseWithSanghaNames = (response: FormResponse): FormResponse => {
     const formattedResponses = { ...response.responses };
     
@@ -249,7 +278,6 @@ export default function ResponsesPage() {
       if (field.type === 'sangha_hierarchy' && field.details) {
         const details = { ...field.details };
         
-        // Replace IDs with names for all hierarchy levels
         if (details.vibhaag) {
           details.vibhaagName = getSanghaName(details.vibhaag, 'vibhaag');
         }
@@ -266,7 +294,6 @@ export default function ResponsesPage() {
           details.ghataName = getSanghaName(details.ghata, 'ghata');
         }
         
-        // Update the value to show names instead of IDs
         const hierarchyPath = [
           details.vibhaagName || details.vibhaag,
           details.khandaName || details.khanda,
@@ -286,50 +313,134 @@ export default function ResponsesPage() {
     };
   };
 
-  // Filter responses based on selections
-  const filteredResponses = responses
-    .map(response => formatResponseWithSanghaNames(response))
-    .filter(response => {
-      // Filter by selected form
-      if (selectedForm && response.formId !== selectedForm) {
-        return false;
+  // CRUD Operations
+  const updateResponse = async (responseId: string, updates: Partial<FormResponse>) => {
+    try {
+      const response = await fetch(`/api/admin/responses/${responseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setResponses(prev => prev.map(r => r._id === responseId ? result.response : r));
+        setEditingResponse(null);
+        showToast('Response updated successfully');
+        fetchData(); // Refresh to get updated data
+      } else {
+        throw new Error('Failed to update response');
+      }
+    } catch (error) {
+      console.error('Error updating response:', error);
+      showToast('Failed to update response', 'error');
+    }
+  };
+
+  const deleteResponse = async (responseId: string) => {
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/admin/responses/${responseId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setResponses(prev => prev.filter(r => r._id !== responseId));
+        setShowDeleteConfirm(null);
+        showToast('Response deleted successfully');
+      } else {
+        throw new Error('Failed to delete response');
+      }
+    } catch (error) {
+      console.error('Error deleting response:', error);
+      showToast('Failed to delete response', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const bulkDeleteResponses = async () => {
+    if (selectedResponses.size === 0) return;
+
+    try {
+      setDeleting(true);
+      const response = await fetch('/api/admin/responses/bulk', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ responseIds: Array.from(selectedResponses) }),
+      });
+
+      if (response.ok) {
+        setResponses(prev => prev.filter(r => !selectedResponses.has(r._id)));
+        setSelectedResponses(new Set());
+        showToast(`${selectedResponses.size} responses deleted successfully`);
+      } else {
+        throw new Error('Failed to delete responses');
+      }
+    } catch (error) {
+      console.error('Error deleting responses:', error);
+      showToast('Failed to delete responses', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Bulk Upload
+  const handleBulkUpload = async () => {
+    if (!uploadFile) {
+      showToast('Please select a file to upload', 'error');
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('useAI', useAI.toString());
+      if (targetCollection !== 'auto') {
+        formData.append('collection', targetCollection);
       }
 
-      // Filter by date range
-      if (dateRange !== 'all') {
-        const responseDate = new Date(response.submittedAt);
-        const now = new Date();
-        const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
-        if (responseDate < daysAgo) {
-          return false;
+      const response = await fetch('/api/admin/responses/bulk-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result: BulkUploadResult = await response.json();
+
+      if (response.ok) {
+        showToast(`Bulk upload completed: ${result.success} successful, ${result.failed} failed`);
+        if (result.success > 0) {
+          fetchData(); // Refresh data
         }
+        setShowBulkUpload(false);
+        setUploadFile(null);
+      } else {
+        throw new Error(result.errors?.join(', ') || 'Upload failed');
       }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      showToast(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
 
-      // Filter by search term
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const hasMatchingResponse = Object.values(response.responses).some(field => 
-          String(field.value).toLowerCase().includes(searchLower) ||
-          field.label.toLowerCase().includes(searchLower)
-        );
-        const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
-        const matchesFormName = response.formName?.toLowerCase().includes(searchLower);
-        
-        if (!hasMatchingResponse && !matchesFormTitle && !matchesFormName) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedResponses = filteredResponses.slice(startIndex, startIndex + itemsPerPage);
-
-  // Enhanced CSV Export with Sangha names and form name
+  // Export Functions
   const exportToCSV = () => {
+    exportData('csv');
+  };
+
+  const exportToExcel = () => {
+    exportData('excel');
+  };
+
+  const exportData = async (format: 'csv' | 'excel') => {
     try {
       const dataToExport = selectedResponses.size > 0 
         ? filteredResponses.filter(r => selectedResponses.has(r._id))
@@ -340,67 +451,92 @@ export default function ResponsesPage() {
         return;
       }
 
-      const allFieldLabels = new Set<string>();
-      dataToExport.forEach(response => {
-        Object.values(response.responses).forEach(field => allFieldLabels.add(field.label));
+      const response = await fetch('/api/admin/responses/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          responseIds: selectedResponses.size > 0 ? Array.from(selectedResponses) : undefined,
+          format: format,
+          filters: {
+            form: selectedForm,
+            collection: selectedCollection,
+            dateRange: dateRange,
+            searchTerm: searchTerm
+          }
+        }),
       });
-      const fieldLabels = Array.from(allFieldLabels);
 
-      const headers = [
-        'Response ID',
-        'Form Title',
-        'Form Name',
-        'Submitted At',
-        ...fieldLabels
-      ];
-
-      const csvData = dataToExport.map(response => {
-        const baseData = [
-          response._id,
-          response.formTitle,
-          response.formName || 'Not specified',
-          new Date(response.submittedAt).toLocaleString('en-US', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })
-        ];
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().split('T')[0];
+        const extension = format === 'csv' ? 'csv' : 'xlsx';
+        a.href = url;
+        a.download = `form-responses-${timestamp}.${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
         
-        const responseData = fieldLabels.map(fieldLabel => {
-          const field = Object.values(response.responses).find(f => f.label === fieldLabel);
-          if (!field) return '';
-          
-          return String(field.value).replace(/"/g, '""').replace(/\n/g, ' ');
-        });
-
-        return [...baseData, ...responseData];
-      });
-
-      const csvContent = [
-        headers.map(header => `"${header}"`).join(','),
-        ...csvData.map(row => row.map(field => `"${field}"`).join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const timestamp = new Date().toISOString().split('T')[0];
-      a.href = url;
-      a.download = `form-responses-${timestamp}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      showToast(`CSV exported with ${dataToExport.length} responses!`);
+        showToast(`${format.toUpperCase()} exported with ${dataToExport.length} responses!`);
+      } else {
+        throw new Error('Export failed');
+      }
     } catch (error) {
       console.error('Export error:', error);
-      showToast('Failed to export CSV', 'error');
+      showToast('Failed to export data', 'error');
     }
   };
+
+  // Filter responses based on selections
+  const filteredResponses = responses
+    .map(response => formatResponseWithSanghaNames(response))
+    .filter(response => {
+      if (selectedForm !== 'all' && response.formId !== selectedForm) {
+        return false;
+      }
+      if (selectedCollection !== 'all' && response.collection !== selectedCollection) {
+        return false;
+      }
+      if (dateRange !== 'all') {
+        const responseDate = new Date(response.submittedAt);
+        const now = new Date();
+        const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
+        if (responseDate < daysAgo) {
+          return false;
+        }
+      }
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const hasMatchingResponse = Object.values(response.responses).some(field => 
+          String(field.value).toLowerCase().includes(searchLower) ||
+          field.label.toLowerCase().includes(searchLower)
+        );
+        const matchesFormTitle = response.formTitle.toLowerCase().includes(searchLower);
+        const matchesFormName = response.formName?.toLowerCase().includes(searchLower);
+        const matchesCollection = response.collection.toLowerCase().includes(searchLower);
+        
+        if (!hasMatchingResponse && !matchesFormTitle && !matchesFormName && !matchesCollection) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+  // Get collection statistics
+  const collectionStats = {
+    total: responses.length,
+    leads: responses.filter(r => r.collection === 'leads').length,
+    swayamsevak: responses.filter(r => r.collection === 'swayamsevak').length
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedResponses = filteredResponses.slice(startIndex, startIndex + itemsPerPage);
 
   // Select/deselect all responses
   const toggleSelectAll = () => {
@@ -412,7 +548,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // Toggle single response selection
   const toggleResponseSelection = (responseId: string) => {
     const newSelected = new Set(selectedResponses);
     if (newSelected.has(responseId)) {
@@ -424,6 +559,8 @@ export default function ResponsesPage() {
   };
 
   const clearFilters = () => {
+    setSelectedForm('all');
+    setSelectedCollection('all');
     setDateRange('all');
     setSearchTerm('');
     setCurrentPage(1);
@@ -436,7 +573,6 @@ export default function ResponsesPage() {
     fetchData();
   };
 
-  // Get unique field labels for table columns
   const getTableColumns = () => {
     const columns = new Set<string>();
     filteredResponses.forEach(response => {
@@ -483,30 +619,36 @@ export default function ResponsesPage() {
             <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
               Form Responses
             </h1>
-            <p className="text-gray-700 text-lg">
-              {filteredResponses.length} submissions • {selectedResponses.size > 0 && `${selectedResponses.size} selected`}
-              {selectedForm && forms.find(f => f._id === selectedForm) && (
-                <>
-                  <span className="mx-2">•</span>
-                  <span className="font-semibold text-purple-600">
-                    {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
-                  </span>
-                </>
+            <div className="flex flex-wrap items-center gap-4 text-gray-700">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{collectionStats.total}</span>
+                <span>total submissions</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-lg">
+                  <UserCheck className="w-3 h-3" />
+                  <span className="text-sm font-medium">{collectionStats.leads} leads</span>
+                </div>
+                <div className="flex items-center gap-1 bg-purple-100 text-purple-800 px-2 py-1 rounded-lg">
+                  <User className="w-3 h-3" />
+                  <span className="text-sm font-medium">{collectionStats.swayamsevak} swayamsevak</span>
+                </div>
+              </div>
+              {selectedResponses.size > 0 && (
+                <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded-lg text-sm font-medium">
+                  {selectedResponses.size} selected
+                </div>
               )}
-            </p>
+            </div>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => setShowSubmissionDetails(!showSubmissionDetails)}
-              className={`px-6 py-3 border rounded-2xl transition-all duration-300 flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md ${
-                showSubmissionDetails 
-                  ? 'bg-purple-600 text-white border-purple-600' 
-                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-              }`}
+              onClick={() => setShowBulkUpload(true)}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl"
             >
-              <Eye className="w-4 h-4" />
-              {showSubmissionDetails ? 'Hide Details' : 'Show Details'}
+              <Upload className="w-4 h-4" />
+              Bulk Upload
             </button>
 
             <button
@@ -518,16 +660,164 @@ export default function ResponsesPage() {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             
-            <button
-              onClick={exportToCSV}
-              disabled={filteredResponses.length === 0}
-              className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={exportToCSV}
+                disabled={filteredResponses.length === 0}
+                className="px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                CSV
+              </button>
+              <button
+                onClick={exportToExcel}
+                disabled={filteredResponses.length === 0}
+                className="px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Excel
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Bulk Upload Modal */}
+        {showBulkUpload && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">Bulk Upload Responses</h3>
+                <button
+                  onClick={() => setShowBulkUpload(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload File (CSV, Excel)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="w-full p-3 border border-gray-300 rounded-2xl"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Supported formats: CSV, Excel (.xlsx, .xls)
+                  </p>
+                </div>
+
+                {/* Target Collection Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Target Collection
+                  </label>
+                  <select
+                    value={targetCollection}
+                    onChange={(e) => setTargetCollection(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300"
+                  >
+                    <option value="auto">Auto-detect (Recommended)</option>
+                    <option value="leads">Leads Collection</option>
+                    <option value="swayamsevak">Swayamsevak Collection</option>
+                    <option value="form_responses">Form Responses Collection</option>
+                  </select>
+                  <p className="text-sm text-gray-500">
+                    {targetCollection === 'auto' 
+                      ? 'AI will automatically detect the best collection based on your data'
+                      : `Data will be saved to ${targetCollection} collection`}
+                  </p>
+                </div>
+
+                {/* AI Toggle */}
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Brain className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-blue-900">AI-Powered Mapping</p>
+                      <p className="text-sm text-blue-700">Use Gemini AI to automatically map columns</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAI}
+                      onChange={(e) => setUseAI(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 text-center">
+                      Processing upload...
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBulkUpload(false)}
+                    className="flex-1 px-4 py-3 text-gray-700 border border-gray-300 rounded-2xl hover:bg-gray-50 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBulkUpload}
+                    disabled={!uploadFile || uploading}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
+                  >
+                    {uploading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full">
+              <div className="text-center">
+                <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Delete Response</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete this response? This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="flex-1 px-4 py-3 text-gray-700 border border-gray-300 rounded-2xl hover:bg-gray-50 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteResponse(showDeleteConfirm)}
+                    disabled={deleting}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all duration-300 disabled:opacity-50"
+                  >
+                    {deleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filters Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 p-6 shadow-sm hover:shadow-md transition-all duration-300">
@@ -538,16 +828,28 @@ export default function ResponsesPage() {
               </div>
               Filters & Search
             </h3>
-            <button
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200"
-            >
-              <X className="w-4 h-4" />
-              Clear Filters
-            </button>
+            <div className="flex items-center gap-3">
+              {selectedResponses.size > 0 && (
+                <button
+                  onClick={bulkDeleteResponses}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-300 flex items-center gap-2 font-medium disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Selected ({selectedResponses.size})
+                </button>
+              )}
+              <button
+                onClick={clearFilters}
+                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Form Filter */}
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
@@ -561,11 +863,32 @@ export default function ResponsesPage() {
                 }}
                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-gray-900 font-medium shadow-sm hover:shadow-md"
               >
+                <option value="all">All Forms</option>
                 {forms.map(form => (
                   <option key={form._id} value={form._id}>
-                    {form.form_name12 || form.title}
+                    {form.form_name12 || form.title} ({form.userType})
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Collection Filter */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Collection
+              </label>
+              <select
+                value={selectedCollection}
+                onChange={(e) => {
+                  setSelectedCollection(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-3 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 text-gray-900 font-medium shadow-sm hover:shadow-md"
+              >
+                <option value="all">All Collections</option>
+                <option value="leads">Leads</option>
+                <option value="swayamsevak">Swayamsevak</option>
+                <option value="form_responses">Form Responses</option>
               </select>
             </div>
 
@@ -621,13 +944,20 @@ export default function ResponsesPage() {
                   Responses ({filteredResponses.length})
                   {tableColumns.length > 0 && ` • ${tableColumns.length} fields`}
                 </h3>
-                {selectedForm && forms.find(f => f._id === selectedForm) && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    Form: <span className="font-medium text-purple-600">
-                      {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
+                <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                  {selectedForm !== 'all' && forms.find(f => f._id === selectedForm) && (
+                    <span>
+                      Form: <span className="font-medium text-purple-600">
+                        {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
+                      </span>
                     </span>
-                  </p>
-                )}
+                  )}
+                  {selectedCollection !== 'all' && (
+                    <span>
+                      Collection: <span className="font-medium text-purple-600 capitalize">{selectedCollection}</span>
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-sm text-gray-500">
                 Page {currentPage} of {totalPages}
@@ -659,6 +989,9 @@ export default function ResponsesPage() {
                           +{tableColumns.length - 4} more
                         </th>
                       )}
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
+                        Collection
+                      </th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-900 bg-gray-50/50">
                         Submitted
                       </th>
@@ -699,6 +1032,32 @@ export default function ResponsesPage() {
                             </td>
                           )}
                           <td className="px-4 py-4">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                              response.collection === 'leads' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : response.collection === 'swayamsevak'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {response.collection === 'leads' ? (
+                                <>
+                                  <UserCheck className="w-3 h-3 mr-1" />
+                                  Lead
+                                </>
+                              ) : response.collection === 'swayamsevak' ? (
+                                <>
+                                  <User className="w-3 h-3 mr-1" />
+                                  Swayamsevak
+                                </>
+                              ) : (
+                                <>
+                                  <FileSpreadsheet className="w-3 h-3 mr-1" />
+                                  Form Response
+                                </>
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
                             <div className="text-sm text-gray-900 font-medium">
                               {new Date(response.submittedAt).toLocaleDateString()}
                             </div>
@@ -711,11 +1070,29 @@ export default function ResponsesPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setEditingResponse(editingResponse?._id === response._id ? null : response);
+                                }}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setExpandedRow(expandedRow === response._id ? null : response._id);
                                 }}
                                 className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-all duration-200"
                               >
                                 {expandedRow === response._id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowDeleteConfirm(response._id);
+                                }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -724,8 +1101,8 @@ export default function ResponsesPage() {
                         {/* Expanded Row Details */}
                         {expandedRow === response._id && (
                           <tr className="bg-gray-50/50">
-                            <td colSpan={tableColumns.length + 3} className="px-4 py-6">
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <td colSpan={tableColumns.length + 4} className="px-4 py-6">
+                              <div className="space-y-6">
                                 {/* Response Data */}
                                 <div>
                                   <h5 className="font-semibold text-gray-900 mb-4 text-lg">
@@ -793,56 +1170,49 @@ export default function ResponsesPage() {
                                   </div>
                                 </div>
 
-                                {/* Metadata */}
-                                {showSubmissionDetails && (
-                                  <div>
+                                {/* Edit Form */}
+                                {editingResponse?._id === response._id && (
+                                  <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-200">
                                     <h5 className="font-semibold text-gray-900 mb-4 text-lg">
-                                      Submission Details
+                                      Edit Response
                                     </h5>
                                     <div className="space-y-3">
-                                      <div className="bg-white rounded-xl p-4 shadow-sm">
-                                        <div className="space-y-3 text-sm">
-                                          <div>
-                                            <span className="font-medium text-gray-700">Response ID:</span>
-                                            <div className="text-gray-900 font-mono text-xs mt-1 bg-gray-100 p-2 rounded-lg">
-                                              {response._id}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">Form Title:</span>
-                                            <div className="text-gray-900 mt-1">{response.formTitle}</div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">Form Name:</span>
-                                            <div className="text-gray-900 mt-1 font-medium">
-                                              {response.formName || 'Not specified'}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">Form Type:</span>
-                                            <div className="text-gray-900 mt-1 capitalize">{response.formType}</div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">Collection:</span>
-                                            <div className="text-gray-900 mt-1">{response.collection}</div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">Submitted At:</span>
-                                            <div className="text-gray-900 mt-1">
-                                              {new Date(response.submittedAt).toLocaleString()}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">IP Address:</span>
-                                            <div className="text-gray-900 mt-1">{response.ipAddress}</div>
-                                          </div>
-                                          <div>
-                                            <span className="font-medium text-gray-700">User Agent:</span>
-                                            <div className="text-gray-900 text-xs mt-1 bg-gray-100 p-2 rounded-lg">
-                                              {response.userAgent}
-                                            </div>
-                                          </div>
+                                      {Object.entries(response.responses).map(([fieldId, field]) => (
+                                        <div key={fieldId} className="bg-white rounded-lg p-3">
+                                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            {field.label}
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={field.value as string}
+                                            onChange={(e) => {
+                                              const updatedResponses = { ...response.responses };
+                                              updatedResponses[fieldId] = {
+                                                ...field,
+                                                value: e.target.value
+                                              };
+                                              setEditingResponse({
+                                                ...response,
+                                                responses: updatedResponses
+                                              });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          />
                                         </div>
+                                      ))}
+                                      <div className="flex gap-3">
+                                        <button
+                                          onClick={() => updateResponse(response._id, { responses: editingResponse.responses })}
+                                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        >
+                                          Save Changes
+                                        </button>
+                                        <button
+                                          onClick={() => setEditingResponse(null)}
+                                          className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                        >
+                                          Cancel
+                                        </button>
                                       </div>
                                     </div>
                                   </div>
@@ -865,19 +1235,13 @@ export default function ResponsesPage() {
                   No responses found
                 </h3>
                 <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto leading-relaxed">
-                  {selectedForm && forms.find(f => f._id === selectedForm) ? (
-                    <>
-                      No responses yet for <span className="font-semibold text-purple-600">
-                        {forms.find(f => f._id === selectedForm)?.form_name12 || forms.find(f => f._id === selectedForm)?.title}
-                      </span>
-                    </>
-                  ) : searchTerm || dateRange !== 'all' ? (
+                  {selectedForm !== 'all' || selectedCollection !== 'all' || searchTerm || dateRange !== 'all' ? (
                     'Try adjusting your filters to see more results'
                   ) : (
                     'No form responses have been submitted yet'
                   )}
                 </p>
-                {searchTerm || dateRange !== 'all' ? (
+                {selectedForm !== 'all' || selectedCollection !== 'all' || searchTerm || dateRange !== 'all' ? (
                   <button
                     onClick={clearFilters}
                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"

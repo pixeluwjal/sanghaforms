@@ -43,21 +43,23 @@ export async function GET(
     }
 
     // Transform the data to ensure nested fields are properly structured
-    const transformField = (field: any) => {
-      return {
-        id: field.id,
-        type: field.type,
-        label: field.label,
-        placeholder: field.placeholder,
-        required: field.required,
-        options: field.options || [],
-        defaultValue: field.defaultValue || '', // ADD THIS LINE
-        order: field.order,
-        conditionalRules: field.conditionalRules || [],
-        nestedFields: (field.nestedFields || []).map(transformField)
-      };
-    };
+  // app/api/forms/[slug]/details/route.ts
 
+const transformField = (field: any) => {
+  return {
+    id: field.id,
+    type: field.type,
+    label: field.label,
+    placeholder: field.placeholder,
+    required: field.required,
+    options: field.options || [],
+    defaultValue: field.defaultValue || '',
+    order: field.order,
+    conditionalRules: field.conditionalRules || [],
+    nestedFields: (field.nestedFields || []).map(transformField),
+    customData: field.customData || {} // ADD THIS LINE
+  };
+};
     const transformSection = (section: any) => {
       return {
         id: section.id,

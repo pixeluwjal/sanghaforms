@@ -11,6 +11,24 @@ export default function FormSection({
   visibleFields,
   formData
 }: FormSectionProps) {
+  // Filter out hidden fields
+  const visibleSectionFields = section.fields?.filter(field => {
+    const isHidden = field.customData?.hidden || false;
+    const isConditionallyVisible = visibleFields.has(field.id);
+    
+    console.log(`Field ${field.label}: hidden=${isHidden}, conditional=${isConditionallyVisible}`);
+    
+    return !isHidden && isConditionallyVisible;
+  }) || [];
+
+  console.log(`Section "${section.title}" - Total fields: ${section.fields?.length || 0}, Visible: ${visibleSectionFields.length}`);
+
+  // Don't render section if no visible fields
+  if (visibleSectionFields.length === 0) {
+    console.log(`Skipping section "${section.title}" - no visible fields`);
+    return null;
+  }
+
   return (
     <div className="mb-10 last:mb-0 border-b border-gray-100 last:border-b-0 pb-8 last:pb-0">
       <div className="mb-6">
@@ -25,7 +43,7 @@ export default function FormSection({
       </div>
 
       <FieldGrouping
-        fields={section.fields || []}
+        fields={visibleSectionFields} // Pass only visible fields
         register={register}
         errors={errors}
         getValues={getValues}

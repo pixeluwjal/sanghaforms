@@ -15,9 +15,14 @@ const FieldRenderer = memo(function FieldRenderer({
   level = 0
 }: FieldRendererProps) {
   const fieldId = field.id;
-  const isVisible = visibleFields.has(fieldId);
   
-  if (!isVisible) {
+  // Check if field is hidden
+  const isHidden = field.customData?.hidden || false;
+  const isConditionallyVisible = visibleFields.has(fieldId);
+  
+  // Skip rendering if field is hidden or not conditionally visible
+  if (isHidden || !isConditionallyVisible) {
+    console.log(`FieldRenderer skipping: ${field.label} (hidden=${isHidden}, conditional=${isConditionallyVisible})`);
     return null;
   }
 
@@ -30,22 +35,33 @@ const FieldRenderer = memo(function FieldRenderer({
     errors[fieldId] ? 'border-red-500 focus:border-red-500' : ''
   }`;
 
-  // Set default value for readonly_text fields when component mounts - FIXED: removed handleFieldChange from deps
+  // Set default value for readonly_text fields when component mounts
   useEffect(() => {
     if (field.type === 'readonly_text' && field.defaultValue) {
       setValue(fieldId, field.defaultValue);
     }
   }, [fieldId, field.type, field.defaultValue, setValue]);
 
+  // Set default values for all field types
+  useEffect(() => {
+    if (field.defaultValue && field.defaultValue.trim() !== '' && field.type !== 'sangha') {
+      console.log(`Setting default value for ${field.id}: ${field.defaultValue}`);
+      setValue(fieldId, field.defaultValue);
+    }
+  }, [fieldId, field.defaultValue, field.type, setValue]);
+
   const renderNestedFields = useCallback((nestedFields?: any[]) => {
     if (!nestedFields || nestedFields.length === 0) {
       return null;
     }
     
-    // Filter nested fields by visibility
-    const visibleNestedFields = nestedFields.filter(nestedField => 
-      visibleFields.has(nestedField.id)
-    );
+    // Filter nested fields by visibility (both hidden flag and conditional logic)
+    const visibleNestedFields = nestedFields.filter(nestedField => {
+      const isNestedHidden = nestedField.customData?.hidden || false;
+      const isNestedConditionallyVisible = visibleFields.has(nestedField.id);
+      
+      return !isNestedHidden && isNestedConditionallyVisible;
+    });
 
     if (visibleNestedFields.length === 0) {
       return null;
@@ -186,29 +202,43 @@ const FieldRenderer = memo(function FieldRenderer({
     );
   }
 
-  // Handle source field type with API data - FIXED: Added proper dependencies
+  // Handle source field type with API data - UPDATED
   if (field.type === 'source') {
     const [sourceOptions, setSourceOptions] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch from API - FIXED: Added empty dependency array to run only once
+    // Fetch from API - UPDATED to use the actual API endpoint
     useEffect(() => {
       let isMounted = true;
       
       const fetchSources = async () => {
         try {
+          console.log('🔄 Fetching sources from API...');
           const response = await fetch('/api/sources');
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
           const data = await response.json();
+          console.log('✅ Sources fetched successfully:', data);
           
           if (isMounted) {
-            setSourceOptions(Array.isArray(data) ? data : []);
+            // Handle both array format and object format
+            if (Array.isArray(data)) {
+              setSourceOptions(data);
+            } else if (data.sources && Array.isArray(data.sources)) {
+              setSourceOptions(data.sources);
+            } else {
+              console.warn('Unexpected API response format:', data);
+              setSourceOptions([]);
+            }
             setIsLoading(false);
           }
         } catch (err) {
-          console.error('Failed to fetch sources:', err);
+          console.error('❌ Failed to fetch sources:', err);
           if (isMounted) {
-            // Use hardcoded fallback
+            // Use hardcoded fallback with better error handling
             setSourceOptions([
               "Mane Mane Samparka",
               "Street Samparka", 
@@ -229,6 +259,7 @@ const FieldRenderer = memo(function FieldRenderer({
               "Existing Pattlist SS"
             ]);
             setIsLoading(false);
+            console.log('🔄 Using fallback sources due to API error');
           }
         }
       };
@@ -238,7 +269,16 @@ const FieldRenderer = memo(function FieldRenderer({
       return () => {
         isMounted = false;
       };
-    }, []); // Empty dependency array - runs only once
+    }, []);
+
+    // Set default value if form has a default source
+    useEffect(() => {
+      if (formData?.settings?.defaultSource && !getValues(fieldId)) {
+        console.log(`🔄 Setting default source: ${formData.settings.defaultSource}`);
+        setValue(fieldId, formData.settings.defaultSource);
+        handleFieldChange(fieldId, formData.settings.defaultSource);
+      }
+    }, [formData?.settings?.defaultSource, fieldId, setValue, handleFieldChange, getValues]);
 
     return (
       <div key={fieldId} className={fieldWrapperClass}>
@@ -255,9 +295,11 @@ const FieldRenderer = memo(function FieldRenderer({
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             onChange={(e) => {
+              console.log(`🔄 Source selected: ${e.target.value}`);
               handleFieldChange(fieldId, e.target.value);
             }}
             disabled={isLoading}
+            defaultValue={formData?.settings?.defaultSource || ''}
           >
             <option value="">
               {isLoading ? 'Loading sources...' : 'Select source'}
@@ -281,6 +323,12 @@ const FieldRenderer = memo(function FieldRenderer({
         
         {isLoading && (
           <p className="mt-2 text-sm text-gray-600">Loading sources...</p>
+        )}
+        
+        {formData?.settings?.defaultSource && (
+          <p className="mt-2 text-sm text-green-600">
+            Default source: <strong>{formData.settings.defaultSource}</strong>
+          </p>
         )}
         
         {errors[fieldId] && (

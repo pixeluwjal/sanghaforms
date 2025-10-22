@@ -1,3 +1,4 @@
+// components/SanghaHierarchyField.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,28 +38,61 @@ interface Field {
   id: string;
   label: string;
   required?: boolean;
+  defaultValue?: string;
+  customData?: any;
 }
 
 interface SanghaHierarchyFieldProps {
   field: Field;
   onFieldChange: (fieldId: string, value: string) => void;
+  theme?: any;
 }
+
+// Helper function to parse custom data
+const parseCustomData = (defaultValue: string) => {
+  try {
+    return defaultValue ? JSON.parse(defaultValue) : {};
+  } catch {
+    return {};
+  }
+};
 
 export const SanghaHierarchyField: React.FC<SanghaHierarchyFieldProps> = ({
   field,
   onFieldChange,
+  theme,
 }) => {
-  const primaryColor = "#ea6221";
+  const primaryColor = theme?.primaryColor || "#ea6221";
 
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State for user selections
-  const [khandaId, setKhandaId] = useState("");
-  const [valayaId, setValayaId] = useState("");
-  const [milanId, setMilanId] = useState("");
-  const [ghataId, setGhataId] = useState("");
+  // Parse default values from field.defaultValue
+  const customData = parseCustomData(field.defaultValue || '');
+  const defaultValues = customData.defaultValues || {};
+
+  // State for user selections - INITIALIZE WITH DEFAULT VALUES
+  const [khandaId, setKhandaId] = useState(defaultValues.khandaId || "");
+  const [valayaId, setValayaId] = useState(defaultValues.valayaId || "");
+  const [milanId, setMilanId] = useState(defaultValues.milanId || "");
+  const [ghataId, setGhataId] = useState(defaultValues.ghataId || "");
+
+  // Initialize field values with defaults when component mounts
+  useEffect(() => {
+    if (defaultValues.khandaId) {
+      onFieldChange(`${field.id}-khanda`, defaultValues.khandaId);
+    }
+    if (defaultValues.valayaId) {
+      onFieldChange(`${field.id}-valaya`, defaultValues.valayaId);
+    }
+    if (defaultValues.milanId) {
+      onFieldChange(`${field.id}-milan`, defaultValues.milanId);
+    }
+    if (defaultValues.ghataId) {
+      onFieldChange(`${field.id}-ghata`, defaultValues.ghataId);
+    }
+  }, [field.id]);
 
   useEffect(() => {
     const loadOrganizationData = async () => {
@@ -165,8 +199,6 @@ export const SanghaHierarchyField: React.FC<SanghaHierarchyFieldProps> = ({
           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base focus:ring-2 focus:ring-offset-1 appearance-none cursor-pointer"
           style={{
             borderColor: khandaId ? primaryColor : '#D1D5DB',
-            focusBorderColor: primaryColor,
-            focusRingColor: `${primaryColor}40`,
           }}
         >
           <option value="">Select Khanda</option>
@@ -191,8 +223,6 @@ export const SanghaHierarchyField: React.FC<SanghaHierarchyFieldProps> = ({
           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base focus:ring-2 focus:ring-offset-1 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             borderColor: valayaId ? primaryColor : '#D1D5DB',
-            focusBorderColor: primaryColor,
-            focusRingColor: `${primaryColor}40`,
           }}
         >
           <option value="">
@@ -220,8 +250,6 @@ export const SanghaHierarchyField: React.FC<SanghaHierarchyFieldProps> = ({
           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base focus:ring-2 focus:ring-offset-1 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             borderColor: milanId ? primaryColor : '#D1D5DB',
-            focusBorderColor: primaryColor,
-            focusRingColor: `${primaryColor}40`,
           }}
         >
           <option value="">
@@ -248,8 +276,6 @@ export const SanghaHierarchyField: React.FC<SanghaHierarchyFieldProps> = ({
           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base focus:ring-2 focus:ring-offset-1 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             borderColor: ghataId ? primaryColor : '#D1D5DB',
-            focusBorderColor: primaryColor,
-            focusRingColor: `${primaryColor}40`,
           }}
         >
           <option value="">

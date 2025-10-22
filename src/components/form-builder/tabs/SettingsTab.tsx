@@ -1,4 +1,5 @@
-"use client";
+// app/admin/sources/page.tsx
+'use client';
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -28,12 +29,13 @@ import {
   FileText,
   Database,
   UserCheck,
-  Users
+  Users,
+  Tag
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { debounce } from "lodash";
 
-// Mock types for demonstration - replace with your actual imports
+// Types
 type FormSettings = {
   userType: string;
   validityDuration: number;
@@ -48,6 +50,7 @@ type FormSettings = {
   whatsappGroupLink: string;
   arrataiGroupLink: string;
   showGroupLinks: boolean;
+  defaultSource: string;
 };
 
 type Theme = {
@@ -60,6 +63,7 @@ type Theme = {
 type Form = {
   _id: string;
   title: string;
+  form_name12: string; // Make sure this is included
   description?: string;
   status: "draft" | "published";
   settings: FormSettings;
@@ -69,6 +73,14 @@ type Form = {
 interface SettingsTabProps {
   form: Form;
   onUpdate: (updates: Partial<Form>) => void;
+}
+
+interface Source {
+  _id: string;
+  name: string;
+  description?: string;
+  order: number;
+  isActive: boolean;
 }
 
 // Global path constant for the form access route
@@ -110,7 +122,7 @@ const getAppOrigin = () => {
   return typeof window !== "undefined" ? window.location.origin : "";
 };
 
-// Color picker component - Mobile responsive
+// Color picker component
 const ColorPicker = ({
   color,
   onChange,
@@ -249,7 +261,6 @@ const CollectionTypeSelector = ({
     </label>
     
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {/* Swayamsevak Collection Option */}
       <button
         onClick={() => onChange('swayamsevak')}
         className={`p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
@@ -279,7 +290,6 @@ const CollectionTypeSelector = ({
         )}
       </button>
 
-      {/* Lead Collection Option */}
       <button
         onClick={() => onChange('lead')}
         className={`p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
@@ -316,7 +326,60 @@ const CollectionTypeSelector = ({
   </div>
 );
 
-// Editable Form Title & Description Component
+// Source Selector Component
+const SourceSelector = ({ 
+  value, 
+  onChange,
+  sources,
+  loading 
+}: { 
+  value: string;
+  onChange: (value: string) => void;
+  sources: Source[];
+  loading: boolean;
+}) => (
+  <div className="space-y-4">
+    <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+      <Tag className="w-4 h-4 text-purple-600" />
+      Default Source
+    </label>
+    
+    {loading ? (
+      <div className="flex items-center gap-2 text-slate-500">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span>Loading sources...</span>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
+        >
+          <option value="">Select a default source (optional)</option>
+          {sources
+            .filter(source => source.isActive)
+            .sort((a, b) => a.order - b.order)
+            .map((source) => (
+              <option key={source._id} value={source.name}>
+                {source.name}
+              </option>
+            ))}
+        </select>
+        {value && (
+          <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+            <div className="flex items-center gap-2 text-purple-700">
+              <CheckCheck className="w-4 h-4" />
+              <span className="text-sm font-medium">Default source set to: {value}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
+
+// Form Details Editor Component
 const FormDetailsEditor = ({ 
   form, 
   onUpdate 
@@ -326,6 +389,7 @@ const FormDetailsEditor = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localTitle, setLocalTitle] = useState(form.title);
+  const [localFormName, setLocalFormName] = useState(form.form_name12 || "");
   const [localDescription, setLocalDescription] = useState(form.description || "");
 
   const handleSave = () => {
@@ -334,8 +398,14 @@ const FormDetailsEditor = ({
       return;
     }
 
+    if (localFormName.trim() === "") {
+      toast.error("Form name cannot be empty");
+      return;
+    }
+
     onUpdate({
       title: localTitle.trim(),
+      form_name12: localFormName.trim(),
       description: localDescription.trim() || undefined
     });
     setIsEditing(false);
@@ -344,6 +414,7 @@ const FormDetailsEditor = ({
 
   const handleCancel = () => {
     setLocalTitle(form.title);
+    setLocalFormName(form.form_name12 || "");
     setLocalDescription(form.description || "");
     setIsEditing(false);
   };
@@ -357,7 +428,7 @@ const FormDetailsEditor = ({
           </div>
           <div>
             <h3 className="text-2xl font-bold text-slate-900">Form Details</h3>
-            <p className="text-sm text-slate-500">Edit title and description</p>
+            <p className="text-sm text-slate-500">Edit title, name and description</p>
           </div>
         </div>
         
@@ -394,7 +465,7 @@ const FormDetailsEditor = ({
         <div className="space-y-3">
           <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
             <FileText className="w-4 h-4 text-purple-600" />
-            Form Title
+            Form Title *
           </label>
           {isEditing ? (
             <input
@@ -413,6 +484,32 @@ const FormDetailsEditor = ({
           <div className="text-xs text-slate-500 flex justify-between">
             <span>This will be displayed as the main form heading</span>
             {isEditing && <span>{localTitle.length}/100 characters</span>}
+          </div>
+        </div>
+
+        {/* Form Name Input */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-purple-600" />
+            Form Name *
+          </label>
+          {isEditing ? (
+            <input
+              type="text"
+              value={localFormName}
+              onChange={(e) => setLocalFormName(e.target.value)}
+              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
+              placeholder="Enter form name..."
+              maxLength={100}
+            />
+          ) : (
+            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent">
+              <p className="text-sm text-slate-700 font-medium">{form.form_name12}</p>
+            </div>
+          )}
+          <div className="text-xs text-slate-500 flex justify-between">
+            <span>Internal name used for identification and reporting</span>
+            {isEditing && <span>{localFormName.length}/100 characters</span>}
           </div>
         </div>
 
@@ -463,6 +560,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     whatsappGroupLink: "",
     arrataiGroupLink: "",
     showGroupLinks: false,
+    defaultSource: "",
   };
 
   const defaultTheme: Theme = {
@@ -487,8 +585,36 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [statusMessage, setStatusMessage] = useState("");
+  
+  // NEW: State for sources
+  const [sources, setSources] = useState<Source[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
 
   const appOrigin = getAppOrigin();
+
+  // NEW: Fetch sources on component mount
+  useEffect(() => {
+    const fetchSources = async () => {
+      try {
+        setSourcesLoading(true);
+        const response = await fetch('/api/admin/sources');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch sources');
+        }
+        
+        const data = await response.json();
+        setSources(data);
+      } catch (error) {
+        console.error('Error fetching sources:', error);
+        toast.error('Failed to load sources');
+      } finally {
+        setSourcesLoading(false);
+      }
+    };
+
+    fetchSources();
+  }, []);
 
   // Real slug availability check
   const debouncedCheckSlug = useCallback(
@@ -498,7 +624,6 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         return;
       }
 
-      // Basic validation
       if (slug.length < 3) {
         setSlugStatus({
           checking: false,
@@ -616,7 +741,8 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     console.log("🚀 PUBLISH BUTTON CLICKED!", {
       newStatus,
       currentStatus: form.status,
-      collectionType: settings.userType
+      collectionType: settings.userType,
+      defaultSource: settings.defaultSource
     });
 
     setSaveStatus("loading");
@@ -656,10 +782,13 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       }
     }
 
-    // Prepare payload
+    // Prepare payload - include form_name12
     const payload = {
       formId: form._id,
       status: newStatus,
+      title: form.title,
+      form_name12: form.form_name12, // Include form_name12
+      description: form.description,
       settings: {
         ...settings,
         isActive: newStatus === "published",
@@ -709,6 +838,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         status: newStatus,
         settings: data.form?.settings || payload.settings,
         theme: data.form?.theme || payload.theme,
+        form_name12: data.form?.form_name12 || payload.form_name12,
       });
 
       // Reset status after success
@@ -737,7 +867,6 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
 
   const currentFormUrl = `${appOrigin}${BASE_FORM_PATH}${currentSlug}`;
 
-  // Fixed handleSlugChange function
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     updateSettings({ customSlug: newSlug });
@@ -773,7 +902,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       {/* Form Details Editor */}
       <FormDetailsEditor form={form} onUpdate={onUpdate} />
 
-      {/* Collection Type Section - NEW */}
+      {/* Collection Type Section */}
       <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
         <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
           <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center shadow-lg">
@@ -788,6 +917,26 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         <CollectionTypeSelector 
           value={settings.userType} 
           onChange={(value) => updateSettings({ userType: value })} 
+        />
+      </section>
+
+      {/* NEW: Default Source Section */}
+      <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
+        <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
+          <div className="w-14 h-14 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-2xl flex items-center justify-center shadow-lg">
+            <Tag className="w-7 h-7 text-teal-600" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900">Default Source</h3>
+            <p className="text-sm text-slate-500">Set default source for form responses</p>
+          </div>
+        </header>
+
+        <SourceSelector 
+          value={settings.defaultSource} 
+          onChange={(value) => updateSettings({ defaultSource: value })}
+          sources={sources}
+          loading={sourcesLoading}
         />
       </section>
 
@@ -1020,7 +1169,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
               </button>
             </div>
 
-            {/* Fixed Custom Slug Section */}
+            {/* Custom Slug Section */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label
@@ -1045,9 +1194,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                     Set Custom Slug
                   </label>
 
-                  {/* Fixed Input Container */}
                   <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Simple input without URL prefix */}
                     <div className="flex-1">
                       <input
                         type="text"
@@ -1063,7 +1210,6 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                       </div>
                     </div>
 
-                    {/* Auto-Generate Button */}
                     <button
                       onClick={generateSlugFromTitle}
                       className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 flex-shrink-0 whitespace-nowrap"
@@ -1222,7 +1368,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
                 <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-200">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-xs sm:text-sm font-medium">
-                    Live • Collecting Responses • {settings.userType === 'swayamsevak' ? 'Swayamsevak Collection' : 'Lead Collection'}
+                    Live • Collecting Responses • {settings.userType === 'swayamsevak' ? 'Swayamsevak Collection' : 'Lead Collection'} • {settings.defaultSource ? `Default Source: ${settings.defaultSource}` : 'No Default Source'}
                   </span>
                 </div>
               </div>

@@ -52,7 +52,11 @@ const FieldSchema = new mongoose.Schema({
   nestedFields: [{
     type: mongoose.Schema.Types.Mixed,
     default: []
-  }]
+  }],
+  customData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
 });
 
 const SectionSchema = new mongoose.Schema({
@@ -87,10 +91,14 @@ const SettingsSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   showGroupLinks: { type: Boolean, default: false },
   whatsappGroupLink: { type: String, default: '' },
-  arrataiGroupLink: { type: String, default: '' }
+  arrataiGroupLink: { type: String, default: '' },
+  // NEW: Add default source field
+  defaultSource: {
+    type: String,
+    default: ''
+  }
 });
 
-// FIXED: Added suppressReservedKeysWarning to remove the warning
 const FormSchema = new mongoose.Schema({
   title: { type: String, required: true },
   form_name12: { type: String, required: true },
@@ -112,7 +120,7 @@ const FormSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, {
-  suppressReservedKeysWarning: true // This removes the warning
+  suppressReservedKeysWarning: true
 });
 
 export default mongoose.models.Form || mongoose.model('Form', FormSchema);

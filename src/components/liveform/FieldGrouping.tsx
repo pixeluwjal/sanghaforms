@@ -15,17 +15,33 @@ export default function FieldGrouping({
   visibleFields, 
   formData 
 }: FieldGroupingProps) {
+  // Filter out hidden fields first
+  const visibleFieldsList = fields.filter(field => {
+    const isHidden = field.customData?.hidden || false;
+    const isConditionallyVisible = visibleFields.has(field.id);
+    
+    console.log(`FieldGrouping - Field "${field.label}": hidden=${isHidden}, conditional=${isConditionallyVisible}`);
+    
+    return !isHidden && isConditionallyVisible;
+  });
+
   // Sort fields by order first
-  const sortedFields = [...fields].sort((a, b) => a.order - b.order);
-  const visibleSortedFields = sortedFields.filter(field => visibleFields.has(field.id));
+  const sortedFields = [...visibleFieldsList].sort((a, b) => a.order - b.order);
   
+  console.log(`FieldGrouping - Total fields: ${fields.length}, Visible: ${sortedFields.length}`);
+
+  // If no visible fields, don't render anything
+  if (sortedFields.length === 0) {
+    return null;
+  }
+
   // If only one field, make it full width
-  if (visibleSortedFields.length === 1) {
+  if (sortedFields.length === 1) {
     return (
       <div className="space-y-6">
         <div className="w-full">
           <FieldRenderer
-            field={visibleSortedFields[0]}
+            field={sortedFields[0]}
             register={register}
             errors={errors}
             getValues={getValues}
@@ -42,7 +58,7 @@ export default function FieldGrouping({
   // For multiple fields, use 2-column grid
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {visibleSortedFields.map((field) => (
+      {sortedFields.map((field) => (
         <div key={field.id} className="relative">
           <FieldRenderer
             field={field}
