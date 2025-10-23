@@ -1,549 +1,31 @@
-// app/admin/sources/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Settings,
-  Users as UsersIcon,
-  Link as LinkIcon,
-  Copy,
-  CheckCheck,
-  Target,
-  Shield,
-  Zap,
-  Rocket,
-  X,
-  AlertTriangle,
-  MessageSquare,
-  Smartphone,
-  Heart,
-  Award,
-  Loader2,
-  Palette,
-  Eye,
-  Layout,
-  Globe,
-  Edit3,
-  Save,
-  Type,
-  FileText,
-  Database,
-  UserCheck,
-  Users,
-  Tag
-} from "lucide-react";
+import { Settings, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { debounce } from "lodash";
 
 // Types
-type FormSettings = {
-  userType: string;
-  validityDuration: number;
-  maxResponses: number;
-  allowMultipleResponses: boolean;
-  enableProgressSave: boolean;
-  collectEmail: boolean;
-  customSlug: string;
-  enableCustomSlug: boolean;
-  isActive: boolean;
-  previousSlugs: string[];
-  whatsappGroupLink: string;
-  arrataiGroupLink: string;
-  showGroupLinks: boolean;
-  defaultSource: string;
-};
 
-type Theme = {
-  primaryColor: string;
-  backgroundColor: string;
-  textColor: string;
-  fontFamily: string;
-};
+// Components
+import StatusIndicator from "../settings/StatusIndicator";
+import FormDetailsEditor from "../settings/FormDetailsEditor";
+import PageBrandingSection from "../settings/PageBrandingSection";
+import DataCollectionSection from "../settings/DataCollectionSection";
+import DefaultSourceSection from "../settings//DefaultSourceSection";
+import StatusBanner from "../settings/StatusBanner";
+import ThemeCustomization from "../settings/ThemeCustomization";
+import FormFeatures from "../settings/FormFeatures";
+import FormAccessSection from "../settings/FormAccessSection";
+import ActionSection from "../settings/ActionSection";
 
-type Form = {
-  _id: string;
-  title: string;
-  form_name12: string; // Make sure this is included
-  description?: string;
-  status: "draft" | "published";
-  settings: FormSettings;
-  theme: Theme;
-};
+// Constants
+const BASE_FORM_PATH = "/forms/";
 
 interface SettingsTabProps {
   form: Form;
   onUpdate: (updates: Partial<Form>) => void;
 }
-
-interface Source {
-  _id: string;
-  name: string;
-  description?: string;
-  order: number;
-  isActive: boolean;
-}
-
-// Global path constant for the form access route
-const BASE_FORM_PATH = "/forms/";
-
-// Modern Toggle Switch Component
-const ToggleSwitch = ({
-  checked,
-  onChange,
-  labelId,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  labelId: string;
-}) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-labelledby={labelId}
-    onClick={() => onChange(!checked)}
-    className={`${
-      checked ? "bg-purple-600" : "bg-slate-300"
-    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-inner`}
-  >
-    <span
-      aria-hidden="true"
-      className={`${
-        checked ? "translate-x-5" : "translate-x-0"
-      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-all duration-300 ease-in-out ${
-        checked ? "shadow-purple-500/25" : "shadow-slate-400/25"
-      }`}
-    />
-  </button>
-);
-
-// Function to safely get app origin
-const getAppOrigin = () => {
-  return typeof window !== "undefined" ? window.location.origin : "";
-};
-
-// Color picker component
-const ColorPicker = ({
-  color,
-  onChange,
-  label,
-}: {
-  color: string;
-  onChange: (color: string) => void;
-  label: string;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-    <label className="text-sm font-semibold text-slate-700 sm:min-w-[120px]">
-      {label}
-    </label>
-    <div className="flex items-center gap-3 flex-1">
-      <div className="relative">
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-12 h-12 cursor-pointer rounded-2xl border-4 border-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
-        />
-        <div className="absolute inset-0 rounded-2xl border border-slate-200 pointer-events-none" />
-      </div>
-      <input
-        type="text"
-        value={color}
-        onChange={(e) => onChange(e.target.value)}
-        className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-mono min-w-0 shadow-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
-        placeholder="#7C3AED"
-      />
-    </div>
-  </div>
-);
-
-// Status Indicator Component
-const StatusIndicator = ({
-  status,
-  message,
-}: {
-  status: "idle" | "loading" | "success" | "error";
-  message: string;
-}) => {
-  const getStatusConfig = () => {
-    switch (status) {
-      case "loading":
-        return {
-          color: "text-purple-600 bg-purple-50 border-purple-200",
-          icon: <Loader2 className="w-4 h-4 animate-spin" />,
-        };
-      case "success":
-        return {
-          color: "text-green-600 bg-green-50 border-green-200",
-          icon: <CheckCheck className="w-4 h-4" />,
-        };
-      case "error":
-        return {
-          color: "text-red-600 bg-red-50 border-red-200",
-          icon: <AlertTriangle className="w-4 h-4" />,
-        };
-      default:
-        return {
-          color: "text-slate-600 bg-slate-50 border-slate-200",
-          icon: null,
-        };
-    }
-  };
-
-  const config = getStatusConfig();
-
-  return (
-    <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-2xl border-2 ${config.color} transition-all duration-300 shadow-lg backdrop-blur-sm`}
-    >
-      {config.icon}
-      <span className="text-sm font-semibold">{message}</span>
-    </div>
-  );
-};
-
-// Feature Card Component
-const FeatureCard = ({
-  icon: Icon,
-  title,
-  description,
-  isActive,
-  onToggle,
-  labelId,
-}: {
-  icon: any;
-  title: string;
-  description: string;
-  isActive: boolean;
-  onToggle: (checked: boolean) => void;
-  labelId: string;
-}) => (
-  <div
-    className={`p-4 rounded-2xl border-2 transition-all duration-300 ${
-      isActive
-        ? "bg-purple-50 border-purple-200 shadow-lg shadow-purple-500/10"
-        : "bg-slate-50 border-slate-200 hover:border-slate-300"
-    }`}
-  >
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-start gap-3 flex-1">
-        <div
-          className={`p-2 rounded-xl transition-all duration-300 ${
-            isActive
-              ? "bg-purple-100 text-purple-600"
-              : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-slate-800 text-sm">{title}</h4>
-          <p className="text-xs text-slate-500 mt-1">{description}</p>
-        </div>
-      </div>
-      <ToggleSwitch checked={isActive} onChange={onToggle} labelId={labelId} />
-    </div>
-  </div>
-);
-
-// Collection Type Selector Component
-const CollectionTypeSelector = ({ 
-  value, 
-  onChange 
-}: { 
-  value: string; 
-  onChange: (value: 'swayamsevak' | 'lead') => void;
-}) => (
-  <div className="space-y-4">
-    <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-      <Database className="w-4 h-4 text-purple-600" />
-      Save Responses To Collection
-    </label>
-    
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <button
-        onClick={() => onChange('swayamsevak')}
-        className={`p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
-          value === 'swayamsevak'
-            ? 'bg-blue-50 border-blue-300 shadow-lg shadow-blue-500/10'
-            : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${
-            value === 'swayamsevak' 
-              ? 'bg-blue-100 text-blue-600' 
-              : 'bg-slate-100 text-slate-500'
-          }`}>
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-slate-800 text-sm">Swayamsevak Collection</h4>
-            <p className="text-xs text-slate-500 mt-1">Save responses to volunteer database</p>
-          </div>
-        </div>
-        {value === 'swayamsevak' && (
-          <div className="mt-2 flex items-center gap-1 text-blue-600 text-xs font-semibold">
-            <CheckCheck className="w-3 h-3" />
-            Currently Selected
-          </div>
-        )}
-      </button>
-
-      <button
-        onClick={() => onChange('lead')}
-        className={`p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
-          value === 'lead'
-            ? 'bg-green-50 border-green-300 shadow-lg shadow-green-500/10'
-            : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${
-            value === 'lead' 
-              ? 'bg-green-100 text-green-600' 
-              : 'bg-slate-100 text-slate-500'
-          }`}>
-            <UserCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-slate-800 text-sm">Lead Collection</h4>
-            <p className="text-xs text-slate-500 mt-1">Save responses to leads database</p>
-          </div>
-        </div>
-        {value === 'lead' && (
-          <div className="mt-2 flex items-center gap-1 text-green-600 text-xs font-semibold">
-            <CheckCheck className="w-3 h-3" />
-            Currently Selected
-          </div>
-        )}
-      </button>
-    </div>
-
-    <p className="text-xs text-slate-500">
-      Choose where form responses will be stored. This determines which database collection will be used.
-    </p>
-  </div>
-);
-
-// Source Selector Component
-const SourceSelector = ({ 
-  value, 
-  onChange,
-  sources,
-  loading 
-}: { 
-  value: string;
-  onChange: (value: string) => void;
-  sources: Source[];
-  loading: boolean;
-}) => (
-  <div className="space-y-4">
-    <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-      <Tag className="w-4 h-4 text-purple-600" />
-      Default Source
-    </label>
-    
-    {loading ? (
-      <div className="flex items-center gap-2 text-slate-500">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        <span>Loading sources...</span>
-      </div>
-    ) : (
-      <div className="space-y-3">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
-        >
-          <option value="">Select a default source (optional)</option>
-          {sources
-            .filter(source => source.isActive)
-            .sort((a, b) => a.order - b.order)
-            .map((source) => (
-              <option key={source._id} value={source.name}>
-                {source.name}
-              </option>
-            ))}
-        </select>
-        {value && (
-          <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
-            <div className="flex items-center gap-2 text-purple-700">
-              <CheckCheck className="w-4 h-4" />
-              <span className="text-sm font-medium">Default source set to: {value}</span>
-            </div>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
-);
-
-// Form Details Editor Component
-const FormDetailsEditor = ({ 
-  form, 
-  onUpdate 
-}: { 
-  form: Form; 
-  onUpdate: (updates: Partial<Form>) => void;
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [localTitle, setLocalTitle] = useState(form.title);
-  const [localFormName, setLocalFormName] = useState(form.form_name12 || "");
-  const [localDescription, setLocalDescription] = useState(form.description || "");
-
-  const handleSave = () => {
-    if (localTitle.trim() === "") {
-      toast.error("Form title cannot be empty");
-      return;
-    }
-
-    if (localFormName.trim() === "") {
-      toast.error("Form name cannot be empty");
-      return;
-    }
-
-    onUpdate({
-      title: localTitle.trim(),
-      form_name12: localFormName.trim(),
-      description: localDescription.trim() || undefined
-    });
-    setIsEditing(false);
-    toast.success("Form details updated!");
-  };
-
-  const handleCancel = () => {
-    setLocalTitle(form.title);
-    setLocalFormName(form.form_name12 || "");
-    setLocalDescription(form.description || "");
-    setIsEditing(false);
-  };
-
-  return (
-    <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
-      <header className="flex items-center justify-between pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center shadow-lg">
-            <Type className="w-7 h-7 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900">Form Details</h3>
-            <p className="text-sm text-slate-500">Edit title, name and description</p>
-          </div>
-        </div>
-        
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span className="font-semibold">Edit</span>
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-xl hover:bg-slate-600 transition-all duration-300 shadow-lg"
-            >
-              <X className="w-4 h-4" />
-              <span className="font-semibold">Cancel</span>
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              <Save className="w-4 h-4" />
-              <span className="font-semibold">Save</span>
-            </button>
-          </div>
-        )}
-      </header>
-
-      <div className="space-y-6">
-        {/* Title Input */}
-        <div className="space-y-3">
-          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-purple-600" />
-            Form Title *
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={localTitle}
-              onChange={(e) => setLocalTitle(e.target.value)}
-              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-lg font-semibold transition-all duration-200 shadow-sm"
-              placeholder="Enter form title..."
-              maxLength={100}
-            />
-          ) : (
-            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent">
-              <h4 className="text-lg font-semibold text-slate-800">{form.title}</h4>
-            </div>
-          )}
-          <div className="text-xs text-slate-500 flex justify-between">
-            <span>This will be displayed as the main form heading</span>
-            {isEditing && <span>{localTitle.length}/100 characters</span>}
-          </div>
-        </div>
-
-        {/* Form Name Input */}
-        <div className="space-y-3">
-          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-purple-600" />
-            Form Name *
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={localFormName}
-              onChange={(e) => setLocalFormName(e.target.value)}
-              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
-              placeholder="Enter form name..."
-              maxLength={100}
-            />
-          ) : (
-            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent">
-              <p className="text-sm text-slate-700 font-medium">{form.form_name12}</p>
-            </div>
-          )}
-          <div className="text-xs text-slate-500 flex justify-between">
-            <span>Internal name used for identification and reporting</span>
-            {isEditing && <span>{localFormName.length}/100 characters</span>}
-          </div>
-        </div>
-
-        {/* Description Input */}
-        <div className="space-y-3">
-          <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-purple-600" />
-            Description
-          </label>
-          {isEditing ? (
-            <textarea
-              value={localDescription}
-              onChange={(e) => setLocalDescription(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm resize-none"
-              placeholder="Describe the purpose of this form..."
-              maxLength={500}
-            />
-          ) : (
-            <div className="px-4 py-3 bg-slate-50 rounded-xl border-2 border-transparent min-h-[80px]">
-              <p className="text-sm text-slate-700">
-                {form.description || "No description provided"}
-              </p>
-            </div>
-          )}
-          <div className="text-xs text-slate-500 flex justify-between">
-            <span>Optional description to provide context to respondents</span>
-            {isEditing && <span>{localDescription.length}/500 characters</span>}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
 
 export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
   const defaultSettings: FormSettings = {
@@ -561,6 +43,7 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     arrataiGroupLink: "",
     showGroupLinks: false,
     defaultSource: "",
+    pageTitle: form.title || ""
   };
 
   const defaultTheme: Theme = {
@@ -579,20 +62,18 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     available: null as boolean | null,
     message: "",
   });
-  const [copiedLink, setCopiedLink] = useState("");
-  const [previewTheme, setPreviewTheme] = useState(false);
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [statusMessage, setStatusMessage] = useState("");
   
-  // NEW: State for sources
+  // State for sources
   const [sources, setSources] = useState<Source[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
 
-  const appOrigin = getAppOrigin();
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
-  // NEW: Fetch sources on component mount
+  // Fetch sources on component mount
   useEffect(() => {
     const fetchSources = async () => {
       try {
@@ -716,33 +197,23 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     onUpdate({ theme: newTheme });
   };
 
-  const generateSlugFromTitle = () => {
-    if (!form.title) return;
-    const slug = form.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)+/g, "");
-    updateSettings({ customSlug: slug });
+  const handlePageTitleUpdate = (pageTitle: string) => {
+    updateSettings({ pageTitle });
   };
 
-  const copyToClipboard = async (text: string, type: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedLink(type);
-      toast.success("Link copied! 🔗");
-      setTimeout(() => setCopiedLink(""), 2000);
-    } catch (error) {
-      toast.error("Failed to copy link");
-    }
+  const handleImagesUpdate = (images: any) => {
+    onUpdate({ images });
   };
 
-  // Save/Publish/Update Handler
   const handleSaveChanges = async (newStatus: "published" | "draft") => {
     console.log("🚀 PUBLISH BUTTON CLICKED!", {
       newStatus,
       currentStatus: form.status,
       collectionType: settings.userType,
-      defaultSource: settings.defaultSource
+      defaultSource: settings.defaultSource,
+      pageTitle: settings.pageTitle,
+      hasFavicon: !!form.images?.favicon,
+      images: form.images
     });
 
     setSaveStatus("loading");
@@ -782,12 +253,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       }
     }
 
-    // Prepare payload - include form_name12
+    // Prepare payload
     const payload = {
       formId: form._id,
       status: newStatus,
       title: form.title,
-      form_name12: form.form_name12, // Include form_name12
+      form_name12: form.form_name12,
       description: form.description,
       settings: {
         ...settings,
@@ -795,9 +266,10 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         customSlug: settings.enableCustomSlug ? settings.customSlug : undefined,
       },
       theme: theme,
+      images: form.images || {}
     };
 
-    console.log("📦 Sending payload:", payload);
+    console.log("📦 Sending payload with images:", payload.images);
 
     try {
       setStatusMessage("Saving to server...");
@@ -833,12 +305,13 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         toast.success("Form unpublished successfully");
       }
 
-      // Update parent component
+      // Update parent component with the returned form data
       onUpdate({
         status: newStatus,
         settings: data.form?.settings || payload.settings,
         theme: data.form?.theme || payload.theme,
         form_name12: data.form?.form_name12 || payload.form_name12,
+        images: data.form?.images || payload.images
       });
 
       // Reset status after success
@@ -860,17 +333,11 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     }
   };
 
-  const currentSlug =
-    settings.enableCustomSlug && settings.customSlug
-      ? settings.customSlug
-      : form._id;
+  const currentSlug = settings.enableCustomSlug && settings.customSlug
+    ? settings.customSlug
+    : form._id;
 
   const currentFormUrl = `${appOrigin}${BASE_FORM_PATH}${currentSlug}`;
-
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    updateSettings({ customSlug: newSlug });
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 space-y-8 pb-12 font-sans">
@@ -902,478 +369,67 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       {/* Form Details Editor */}
       <FormDetailsEditor form={form} onUpdate={onUpdate} />
 
+      {/* Page Branding Section */}
+      <PageBrandingSection 
+        form={form}
+        settings={settings}
+        onImagesUpdate={handleImagesUpdate}
+        onPageTitleUpdate={handlePageTitleUpdate}
+      />
+
       {/* Collection Type Section */}
-      <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
-        <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-          <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center shadow-lg">
-            <Database className="w-7 h-7 text-indigo-600" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900">Data Collection</h3>
-            <p className="text-sm text-slate-500">Choose where responses will be saved</p>
-          </div>
-        </header>
+      <DataCollectionSection 
+        settings={settings}
+        onUpdate={updateSettings}
+      />
 
-        <CollectionTypeSelector 
-          value={settings.userType} 
-          onChange={(value) => updateSettings({ userType: value })} 
-        />
-      </section>
-
-      {/* NEW: Default Source Section */}
-      <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6">
-        <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-          <div className="w-14 h-14 bg-gradient-to-br from-teal-100 to-emerald-100 rounded-2xl flex items-center justify-center shadow-lg">
-            <Tag className="w-7 h-7 text-teal-600" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900">Default Source</h3>
-            <p className="text-sm text-slate-500">Set default source for form responses</p>
-          </div>
-        </header>
-
-        <SourceSelector 
-          value={settings.defaultSource} 
-          onChange={(value) => updateSettings({ defaultSource: value })}
-          sources={sources}
-          loading={sourcesLoading}
-        />
-      </section>
+      {/* Default Source Section */}
+      <DefaultSourceSection 
+        settings={settings}
+        onUpdate={updateSettings}
+        sources={sources}
+        loading={sourcesLoading}
+      />
 
       {/* Status Banner */}
-      <div
-        className={`p-4 sm:p-6 rounded-3xl text-center shadow-xl transition-all duration-500 backdrop-blur-sm ${
-          form.status === "published"
-            ? "bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 text-green-800"
-            : "bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 text-amber-800"
-        }`}
-      >
-        <div className="flex items-center justify-center gap-3 mb-2">
-          {form.status === "published" ? (
-            <>
-              <Rocket className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
-              <h4 className="font-bold text-xl sm:text-2xl">FORM IS LIVE</h4>
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600" />
-              <h4 className="font-bold text-xl sm:text-2xl">FORM IS DRAFT</h4>
-            </>
-          )}
-        </div>
-        <p className="text-xs sm:text-sm font-medium text-slate-600">
-          {form.status === "published"
-            ? `Your form is publicly accessible at:`
-            : "Your form is not currently visible to the public"}
-        </p>
-        {form.status === "published" && (
-          <p className="mt-2 font-mono text-xs sm:text-sm bg-white/50 px-3 sm:px-4 py-2 rounded-xl border border-green-200 inline-block max-w-full overflow-x-auto">
-            {currentFormUrl}
-          </p>
-        )}
-      </div>
+      <StatusBanner 
+        form={form}
+        settings={settings}
+        currentFormUrl={currentFormUrl}
+      />
 
       <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Theme & Settings */}
         <div className="space-y-6 lg:space-y-8">
-          {/* Theme Customization */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
-            <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <Palette className="w-6 h-6 sm:w-7 sm:h-7 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Theme Design
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Customize the visual appearance
-                </p>
-              </div>
-            </header>
-
-            {/* Theme Preview */}
-            {previewTheme && (
-              <div className="p-4 sm:p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-purple-200 animate-in fade-in duration-500">
-                <div className="text-center mb-4">
-                  <h4 className="font-bold text-slate-700 text-base sm:text-lg flex items-center justify-center gap-2">
-                    <Layout className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" /> Live Preview
-                  </h4>
-                </div>
-                <div
-                  className="p-4 sm:p-6 rounded-2xl border-2 border-slate-200 shadow-lg"
-                  style={{
-                    backgroundColor: theme.backgroundColor,
-                    color: theme.textColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                >
-                  <div className="space-y-4">
-                    <h5 className="text-lg sm:text-2xl font-bold">Sample Form Title</h5>
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Sample input field..."
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 transition-colors"
-                        style={{ borderColor: theme.primaryColor + "40" }}
-                        disabled
-                      />
-                      <button
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-bold transition-transform hover:scale-[1.02] text-sm sm:text-base shadow-lg"
-                        style={{
-                          backgroundColor: theme.primaryColor,
-                          color: "white",
-                        }}
-                      >
-                        Submit Response
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-5">
-              <ColorPicker
-                label="Primary Color"
-                color={theme.primaryColor}
-                onChange={(color) => updateTheme({ primaryColor: color })}
-              />
-              <ColorPicker
-                label="Background"
-                color={theme.backgroundColor}
-                onChange={(color) => updateTheme({ backgroundColor: color })}
-              />
-              <ColorPicker
-                label="Text Color"
-                color={theme.textColor}
-                onChange={(color) => updateTheme({ textColor: color })}
-              />
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <label className="text-sm font-semibold text-slate-700 sm:min-w-[120px]">
-                  Font Family
-                </label>
-                <select
-                  value={theme.fontFamily}
-                  onChange={(e) => updateTheme({ fontFamily: e.target.value })}
-                  className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-200"
-                >
-                  <option value="Inter">Inter (Default)</option>
-                  <option value="Roboto">Roboto</option>
-                  <option value="Open Sans">Open Sans</option>
-                  <option value="Poppins">Poppins</option>
-                  <option value="Montserrat">Montserrat</option>
-                  <option value="Lato">Lato</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setPreviewTheme(!previewTheme)}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all duration-300 text-purple-700 font-semibold border border-purple-200 hover:border-purple-300"
-            >
-              <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-              {previewTheme ? "Hide Live Preview" : "Show Live Preview"}
-            </button>
-          </section>
-
-          {/* Form Features */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
-            <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Form Features
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Configure form behavior and options
-                </p>
-              </div>
-            </header>
-
-            <div className="space-y-4">
-              <FeatureCard
-                icon={Shield}
-                title="Progress Saving"
-                description="Allow users to save and continue later"
-                isActive={settings.enableProgressSave}
-                onToggle={(val) => updateSettings({ enableProgressSave: val })}
-                labelId="progress-saving"
-              />
-              <FeatureCard
-                icon={UsersIcon}
-                title="Collect Email"
-                description="Require email address for responses"
-                isActive={settings.collectEmail}
-                onToggle={(val) => updateSettings({ collectEmail: val })}
-                labelId="collect-email"
-              />
-              <FeatureCard
-                icon={Globe}
-                title="Multiple Responses"
-                description="Allow users to submit multiple times"
-                isActive={settings.allowMultipleResponses}
-                onToggle={(val) =>
-                  updateSettings({ allowMultipleResponses: val })
-                }
-                labelId="multiple-responses"
-              />
-            </div>
-          </section>
+          <ThemeCustomization 
+            theme={theme}
+            onUpdate={updateTheme}
+          />
+          
+          <FormFeatures 
+            settings={settings}
+            onUpdate={updateSettings}
+          />
         </div>
 
         {/* Right Column - URL & Actions */}
         <div className="space-y-6 lg:space-y-8">
-          {/* URL & Links Section */}
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 sm:p-6 lg:p-8 space-y-6">
-            <header className="flex items-center gap-4 pb-4 border-b border-slate-100">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-teal-100 to-green-100 rounded-2xl flex items-center justify-center shadow-lg">
-                <LinkIcon className="w-6 h-6 sm:w-7 sm:h-7 text-teal-600" />
-              </div>
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Form Access
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  Configure your public URL and links
-                </p>
-              </div>
-            </header>
-
-            {/* Current Live URL Display */}
-            <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
-                  Public Form Link
-                </p>
-                <p className="text-sm sm:text-base font-mono break-all text-purple-900 font-medium">
-                  {currentFormUrl}
-                </p>
-              </div>
-              <button
-                onClick={() => copyToClipboard(currentFormUrl, "main")}
-                className={`p-2 sm:p-3 rounded-xl transition-all duration-300 flex-shrink-0 shadow-lg ${
-                  copiedLink === "main"
-                    ? "bg-green-500 text-white scale-110"
-                    : "bg-white text-purple-600 hover:bg-purple-50 border border-purple-200 hover:scale-105"
-                }`}
-              >
-                {copiedLink === "main" ? (
-                  <CheckCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                ) : (
-                  <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
-                )}
-              </button>
-            </div>
-
-            {/* Custom Slug Section */}
-            <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <label
-                  id="custom-slug-label"
-                  className="font-semibold text-slate-700 text-base sm:text-lg flex items-center gap-3"
-                >
-                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" /> Custom URL Slug
-                </label>
-                <ToggleSwitch
-                  checked={settings.enableCustomSlug}
-                  onChange={(val) => updateSettings({ enableCustomSlug: val })}
-                  labelId="custom-slug-label"
-                />
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500">
-                Use a memorable, human-readable URL instead of the default ID.
-              </p>
-
-              {settings.enableCustomSlug && (
-                <div className="p-4 sm:p-5 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-4 animate-in fade-in duration-500">
-                  <label className="block text-sm font-bold text-slate-700">
-                    Set Custom Slug
-                  </label>
-
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={settings.customSlug ?? ""}
-                        onChange={handleSlugChange}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm font-medium"
-                        placeholder="my-special-event"
-                      />
-                      <div className="mt-1 text-xs text-slate-500 break-all">
-                        Full URL: {appOrigin}
-                        {BASE_FORM_PATH}
-                        {settings.customSlug}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={generateSlugFromTitle}
-                      className="px-3 sm:px-4 py-2 sm:py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 flex-shrink-0 whitespace-nowrap"
-                    >
-                      <Target className="w-4 h-4" />
-                      <span className="hidden sm:inline">Auto-Generate</span>
-                      <span className="sm:hidden">Auto</span>
-                    </button>
-                  </div>
-
-                  {settings.customSlug && (
-                    <div
-                      className={`text-sm font-semibold flex items-center gap-2 ${
-                        slugStatus.available === true
-                          ? "text-green-600"
-                          : slugStatus.available === false
-                          ? "text-red-600"
-                          : "text-purple-600"
-                      }`}
-                    >
-                      {slugStatus.checking ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : null}
-                      {slugStatus.message}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Community Links Section */}
-            <div className="pt-6 border-t border-slate-100 space-y-4">
-              <div className="flex items-center justify-between">
-                <label
-                  id="show-groups-label"
-                  className="font-semibold text-slate-700 text-base sm:text-lg flex items-center gap-3"
-                >
-                  <Smartphone className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" /> Community
-                  Links
-                </label>
-                <ToggleSwitch
-                  checked={settings.showGroupLinks}
-                  onChange={(val) => updateSettings({ showGroupLinks: val })}
-                  labelId="show-groups-label"
-                />
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500">
-                Show links to community groups on the form completion page.
-              </p>
-
-              {settings.showGroupLinks && (
-                <div className="p-4 sm:p-5 bg-gradient-to-br from-purple-50 to-indigo-50/70 rounded-2xl border-2 border-purple-200 space-y-4 animate-in fade-in duration-500">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />{" "}
-                      WhatsApp Group
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.whatsappGroupLink}
-                      onChange={(e) =>
-                        updateSettings({ whatsappGroupLink: e.target.value })
-                      }
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
-                      placeholder="chat.whatsapp.com/invitecode"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                      <UsersIcon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" /> Arratai
-                      Group
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.arrataiGroupLink}
-                      onChange={(e) =>
-                        updateSettings({ arrataiGroupLink: e.target.value })
-                      }
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm transition-all duration-200 shadow-sm"
-                      placeholder="arratai-group.com/join"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Action Section */}
-          <section className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-white to-purple-50/30 rounded-3xl border-2 border-purple-200 shadow-2xl">
-            <div className="text-center mb-6">
-              <h4 className="font-bold text-xl sm:text-2xl text-slate-800 mb-2">
-                {form.status === "published"
-                  ? "Form Management"
-                  : "Ready to Launch?"}
-              </h4>
-              <p className="text-xs sm:text-sm text-slate-600">
-                {form.status === "published"
-                  ? "Your form is live and collecting responses"
-                  : "Publish to make your form publicly accessible"}
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-              {form.status === "published" ? (
-                <>
-                  <button
-                    onClick={() => handleSaveChanges("draft")}
-                    disabled={saveStatus === "loading"}
-                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-2xl hover:shadow-2xl hover:shadow-red-300/50 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 shadow-lg text-sm sm:text-base"
-                  >
-                    {saveStatus === "loading" ? (
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    ) : (
-                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                    )}
-                    {saveStatus === "loading"
-                      ? "Unpublishing..."
-                      : "Unpublish Form"}
-                  </button>
-                  <button
-                    onClick={() => handleSaveChanges("published")}
-                    disabled={saveStatus === "loading"}
-                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-2xl hover:shadow-2xl hover:shadow-purple-300/60 disabled:opacity-50 font-bold transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3 shadow-lg text-sm sm:text-base"
-                  >
-                    {saveStatus === "loading" ? (
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    ) : (
-                      <CheckCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                    )}
-                    {saveStatus === "loading"
-                      ? "Updating..."
-                      : "Update Settings"}
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => handleSaveChanges("published")}
-                  disabled={saveStatus === "loading"}
-                  className="w-full px-6 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl shadow-2xl shadow-green-300/60 hover:shadow-3xl hover:shadow-emerald-300/70 disabled:opacity-50 text-base sm:text-lg font-bold transition-all duration-300 flex items-center justify-center gap-3 hover:scale-105"
-                >
-                  {saveStatus === "loading" ? (
-                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
-                  ) : (
-                    <Rocket className="w-5 h-5 sm:w-6 sm:h-6" />
-                  )}
-                  {saveStatus === "loading"
-                    ? "Publishing..."
-                    : "Publish Form Now"}
-                </button>
-              )}
-            </div>
-
-            {form.status === "published" && (
-              <div className="mt-4 text-center">
-                <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 text-green-700 rounded-xl border border-green-200">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs sm:text-sm font-medium">
-                    Live • Collecting Responses • {settings.userType === 'swayamsevak' ? 'Swayamsevak Collection' : 'Lead Collection'} • {settings.defaultSource ? `Default Source: ${settings.defaultSource}` : 'No Default Source'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </section>
+          <FormAccessSection 
+            settings={settings}
+            form={form}
+            appOrigin={appOrigin}
+            baseFormPath={BASE_FORM_PATH}
+            slugStatus={slugStatus}
+            onUpdate={updateSettings}
+            onSlugCheck={debouncedCheckSlug}
+          />
+          
+          <ActionSection 
+            form={form}
+            saveStatus={saveStatus}
+            onSaveChanges={handleSaveChanges}
+            settings={settings}
+          />
         </div>
       </div>
     </div>

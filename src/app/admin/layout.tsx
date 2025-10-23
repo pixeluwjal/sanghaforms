@@ -28,7 +28,8 @@ const navigation = [
 
 const secondaryNavigation = [
   { name: 'Sangha Hierarchy', href: '/admin/sangha-hierarchy', icon: Users },
-  { name: 'Sources', href: '/admin/sources', icon: Database }
+  { name: 'Sources', href: '/admin/sources', icon: Database },
+  { name: 'Bulk Upload', href: '/admin/bulk-upload', icon: Database },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

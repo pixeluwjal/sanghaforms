@@ -13,17 +13,14 @@ export interface ISwayamsevakResponse extends mongoose.Document {
   formSlug: string;
   responses: ISwayamsevakResponseValue[];
   submittedAt: Date;
-  // Swayamsevak-specific fields
-  swayamsevakId: string;
-  sangha: string;
-  area: string;
-  district: string;
-  state: string;
+  // Source field
+  source: string;
+  // Khanda, Valaya, Milan Ghat fields
+  khanda: string;
+  valaya: string;
+  milanGhat: string;
   // Personal information
   name: string;
-  email?: string;
-  phone?: string;
-  dateOfBirth?: Date;
   // Additional metadata
   ipAddress: string;
   userAgent: string;
@@ -41,17 +38,14 @@ const swayamsevakResponseSchema = new mongoose.Schema({
   formTitle: { type: String, required: true },
   formSlug: { type: String, required: true },
   responses: [swayamsevakResponseValueSchema],
-  // Swayamsevak-specific fields
-  swayamsevakId: { type: String, required: true },
-  sangha: { type: String, required: true },
-  area: { type: String, required: true },
-  district: String,
-  state: String,
+  // Source field
+  source: { type: String, required: true },
+  // Khanda, Valaya, Milan Ghat fields
+  khanda: { type: String, required: true },
+  valaya: { type: String, required: true },
+  milanGhat: { type: String, required: true },
   // Personal information
   name: { type: String, required: true },
-  email: String,
-  phone: String,
-  dateOfBirth: Date,
   // Metadata
   ipAddress: { type: String, required: true },
   userAgent: { type: String, required: true }
@@ -61,9 +55,9 @@ const swayamsevakResponseSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 swayamsevakResponseSchema.index({ formId: 1, submittedAt: -1 });
-swayamsevakResponseSchema.index({ swayamsevakId: 1 });
-swayamsevakResponseSchema.index({ sangha: 1 });
-swayamsevakResponseSchema.index({ area: 1 });
-swayamsevakResponseSchema.index({ district: 1 });
+swayamsevakResponseSchema.index({ source: 1 });
+swayamsevakResponseSchema.index({ khanda: 1 });
+swayamsevakResponseSchema.index({ valaya: 1 });
+swayamsevakResponseSchema.index({ milanGhat: 1 });
 
 export default mongoose.models.SwayamsevakResponse || mongoose.model<ISwayamsevakResponse>('SwayamsevakResponse', swayamsevakResponseSchema);

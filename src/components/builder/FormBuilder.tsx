@@ -159,7 +159,7 @@ const addNestedFieldRecursively = (
   });
 };
 
-// Image Upload Component
+// Improved Image Upload Component
 const ImageUpload: React.FC<{
   type: "logo" | "banner";
   currentImage?: string;
@@ -239,7 +239,13 @@ const ImageUpload: React.FC<{
     setDragOver(false);
   };
 
-  const dimensions = type === "logo" ? "w-32 h-32" : "w-full h-48";
+  const getDimensions = () => {
+    if (type === "logo") {
+      return "w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32";
+    }
+    return "w-full h-32 sm:h-36 md:h-40 lg:h-48";
+  };
+
   const label = type === "logo" ? "Logo" : "Banner";
 
   return (
@@ -251,7 +257,7 @@ const ImageUpload: React.FC<{
       {currentImage ? (
         <div className="relative group">
           <div
-            className={`${dimensions} border-2 border-dashed border-purple-300 rounded-lg overflow-hidden`}
+            className={`${getDimensions()} border-2 border-dashed border-purple-300 rounded-lg overflow-hidden mx-auto`}
           >
             <img
               src={currentImage}
@@ -261,14 +267,14 @@ const ImageUpload: React.FC<{
           </div>
           <button
             onClick={onImageRemove}
-            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
           <div className="mt-2 text-center">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-sm text-purple-600 hover:text-purple-700"
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
             >
               Change {label}
             </button>
@@ -276,10 +282,10 @@ const ImageUpload: React.FC<{
         </div>
       ) : (
         <div
-          className={`${dimensions} border-2 border-dashed ${
+          className={`${getDimensions()} border-2 border-dashed ${
             dragOver ? "border-purple-500 bg-purple-50" : "border-purple-300"
-          } rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
-            uploading ? "opacity-50" : "hover:border-purple-400"
+          } rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors mx-auto ${
+            uploading ? "opacity-50" : "hover:border-purple-400 hover:bg-purple-50"
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -288,16 +294,16 @@ const ImageUpload: React.FC<{
         >
           {uploading ? (
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="text-sm text-gray-600 mt-2">Uploading...</p>
+              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">Uploading...</p>
             </div>
           ) : (
             <>
-              <Upload className="w-8 h-8 text-purple-400 mb-2" />
-              <p className="text-sm text-black text-center">
+              <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 mb-1 sm:mb-2" />
+              <p className="text-xs sm:text-sm text-black text-center px-2">
                 Drag & drop or click to upload
               </p>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1 px-2 text-center">
                 PNG, JPG, GIF up to 5MB
               </p>
             </>
@@ -322,9 +328,9 @@ const DefaultValuePreview: React.FC<{
   onUpdate: (sectionId: string, updates: Partial<Section>) => void;
 }> = ({ section, onUpdate }) => {
   return (
-    <div className="mt-4 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
-      <h4 className="text-lg font-semibold text-black mb-3 flex items-center gap-2">
-        <Eye className="w-5 h-5 text-purple-600" />
+    <div className="mt-4 p-3 sm:p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
+      <h4 className="text-base sm:text-lg font-semibold text-black mb-3 flex items-center gap-2">
+        <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
         Default Value Preview
       </h4>
       
@@ -337,7 +343,7 @@ const DefaultValuePreview: React.FC<{
             type="text"
             value={section.defaultValue || ''}
             onChange={(e) => onUpdate(section.id, { defaultValue: e.target.value })}
-            className="w-full border-2 border-purple-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full border-2 border-purple-300 rounded-lg px-3 py-2 text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm sm:text-base"
             placeholder="Enter section default value"
           />
         </div>
@@ -349,8 +355,8 @@ const DefaultValuePreview: React.FC<{
             </label>
             <div className="space-y-2">
               {section.fields.map((field) => (
-                <div key={field.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-purple-200">
-                  <span className="text-sm font-medium text-black flex-1">
+                <div key={field.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 bg-white rounded-lg border border-purple-200">
+                  <span className="text-sm font-medium text-black flex-1 min-w-0 break-words">
                     {field.label}
                   </span>
                   <input
@@ -359,7 +365,7 @@ const DefaultValuePreview: React.FC<{
                     onChange={(e) => {
                       console.log(`Update field ${field.id} default value:`, e.target.value);
                     }}
-                    className="flex-1 border border-purple-300 rounded px-2 py-1 text-sm text-black"
+                    className="flex-1 border border-purple-300 rounded px-2 py-1 text-sm text-black min-w-0"
                     placeholder={`Default ${field.type} value`}
                   />
                 </div>
@@ -837,23 +843,23 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
       <div className="h-screen flex flex-col">
         {/* Header with Image Settings */}
-        <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 px-4 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
             {/* Mobile Menu Button */}
             <div className="lg:hidden flex items-center">
               <button
                 onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
                 className="p-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="flex-1 text-center">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">
+            <div className="flex-1 text-center min-w-0">
+              <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent truncate">
                 Form Builder
               </h1>
-              <p className="text-black mt-1 text-xs sm:text-sm lg:text-base">
+              <p className="text-black mt-1 text-xs sm:text-sm lg:text-base truncate">
                 Build your form by adding fields and sections
               </p>
             </div>
@@ -861,17 +867,17 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowPreview(!showPreview)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-sm"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-xs sm:text-sm"
               >
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">Preview</span>
+                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Preview</span>
               </button>
               <button
                 onClick={() => setShowImageSettings(!showImageSettings)}
-                className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-sm"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white border-2 border-purple-300 rounded-lg text-purple-600 hover:bg-purple-50 transition-colors text-xs sm:text-sm"
               >
-                <ImageIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Images</span>
+                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Images</span>
               </button>
             </div>
           </div>
@@ -882,30 +888,31 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
               <img
                 src={form.images.banner}
                 alt="Form Banner"
-                className="w-full h-20 sm:h-24 lg:h-28 object-cover"
+                className="w-full h-16 sm:h-20 lg:h-24 xl:h-28 object-cover"
               />
             </div>
           )}
 
           {/* Image Settings Panel */}
           {showImageSettings && (
-            <div className="fixed sm:absolute top-1/2 left-1/2 sm:top-full sm:left-auto sm:right-0 mt-2 w-[90vw] sm:w-80 bg-white border-2 border-purple-300 rounded-xl shadow-xl z-50 p-4 transform -translate-x-1/2 sm:translate-x-0 -translate-y-1/2 sm:translate-y-0">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-black">Form Images</h3>
+            <div className="fixed inset-4 sm:absolute sm:top-full sm:left-auto sm:right-0 sm:mt-2 w-auto max-w-[calc(100vw-2rem)] sm:w-80 bg-white border-2 border-purple-300 rounded-xl shadow-xl z-50 p-3 sm:p-4 transform sm:translate-x-0">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="font-semibold text-black text-sm sm:text-base">Form Images</h3>
                 <button
                   onClick={() => setShowImageSettings(false)}
                   className="text-purple-400 hover:text-purple-600"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 sm:space-y-6">
                 <ImageUpload
                   type="logo"
                   currentImage={form.images?.logo}
                   onImageUpload={handleLogoUpload}
                   onImageRemove={handleLogoRemove}
+                  className="text-center"
                 />
 
                 <ImageUpload
@@ -913,6 +920,7 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                   currentImage={form.images?.banner}
                   onImageUpload={handleBannerUpload}
                   onImageRemove={handleBannerRemove}
+                  className="text-center"
                 />
               </div>
             </div>
@@ -935,30 +943,30 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
           {/* Main Builder Area - Right */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Section Navigation Header */}
-            <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold text-black truncate">
+            <div className="flex-shrink-0 bg-white border-b-2 border-purple-300 p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-black truncate">
                     {currentSection ? currentSection.title : "No Sections"}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {currentSection ? `${currentSection.fields.length} field(s)` : "Add a section to get started"}
                   </p>
                 </div>
                 
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                   {/* AI Generate Button */}
                   <button
                     onClick={() => setShowAIGenerator(true)}
-                    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition-all duration-300 font-semibold text-sm"
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition-all duration-300 font-semibold text-xs sm:text-sm"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline">AI Generate</span>
                   </button>
 
                   {/* Section Counter */}
-                  <div className="text-sm text-black font-medium whitespace-nowrap">
-                    Section {currentSectionIndex + 1} of {form.sections.length}
+                  <div className="text-xs sm:text-sm text-black font-medium whitespace-nowrap">
+                    {currentSectionIndex + 1}/{form.sections.length}
                   </div>
                   
                   {/* Navigation Buttons */}
@@ -966,17 +974,17 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                     <button
                       onClick={goToPreviousSection}
                       disabled={currentSectionIndex === 0}
-                      className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
+                      className="p-1 sm:p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                     </button>
                     
                     <button
                       onClick={goToNextSection}
                       disabled={currentSectionIndex === form.sections.length - 1}
-                      className="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
+                      className="p-1 sm:p-2 bg-purple-100 hover:bg-purple-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-purple-600"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                     </button>
                   </div>
                 </div>
@@ -990,13 +998,13 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                       <button
                         key={section.id}
                         onClick={() => goToSection(index)}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                        className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 whitespace-nowrap min-w-[2rem] text-center ${
                           index === currentSectionIndex
                             ? 'bg-purple-600 text-white shadow border border-purple-600'
                             : 'bg-purple-100 text-black border border-purple-300 hover:bg-purple-200'
                         }`}
                       >
-                        {section.title || `S${index + 1}`}
+                        {section.title ? (section.title.length > 10 ? `${section.title.substring(0, 8)}...` : section.title) : `S${index + 1}`}
                       </button>
                     ))}
                   </div>
@@ -1007,7 +1015,7 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
             {/* Scrollable Form Content */}
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-y-auto">
-                <div className="p-4 space-y-4">
+                <div className="p-3 sm:p-4 space-y-4">
                   {/* Default Value Preview */}
                   {showPreview && currentSection && (
                     <DefaultValuePreview
@@ -1040,29 +1048,29 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                     </div>
                   ) : (
                     /* Empty State */
-                    <div className="bg-white rounded-xl p-6 border-2 border-purple-300 shadow-lg text-center">
+                    <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-purple-300 shadow-lg text-center">
                       <div className="max-w-md mx-auto">
-                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-300">
-                          <Plus className="w-8 h-8 text-purple-600" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 border-2 border-purple-300">
+                          <Plus className="w-5 h-5 sm:w-8 sm:h-8 text-purple-600" />
                         </div>
-                        <h3 className="text-xl font-semibold text-black mb-2">
+                        <h3 className="text-lg sm:text-xl font-semibold text-black mb-2">
                           No Sections Yet
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
                           Start building your form by adding your first section.
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
                           <button
                             onClick={addSection}
-                            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium border-2 border-purple-600"
+                            className="bg-purple-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium border-2 border-purple-600 text-sm sm:text-base"
                           >
                             Create First Section
                           </button>
                           <button
                             onClick={() => setShowAIGenerator(true)}
-                            className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium border-2 border-purple-600"
+                            className="flex items-center justify-center gap-1 sm:gap-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:shadow-lg transition-all duration-300 font-medium border-2 border-purple-600 text-sm sm:text-base"
                           >
-                            <Sparkles className="w-4 h-4" />
+                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                             AI Generate
                           </button>
                         </div>
@@ -1073,16 +1081,16 @@ export const FormBuilder = ({ form, updateForm }: FormBuilderProps) => {
                   {/* Add Section Button */}
                   <button
                     onClick={addSection}
-                    className="w-full flex items-center justify-center gap-3 p-4 bg-white border-2 border-dashed border-purple-300 rounded-xl text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:shadow-lg transition-all duration-300 group"
+                    className="w-full flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white border-2 border-dashed border-purple-300 rounded-xl text-purple-600 hover:bg-purple-50 hover:border-purple-400 hover:shadow-lg transition-all duration-300 group"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-inner border-2 border-purple-300">
-                      <Plus className="w-5 h-5 text-purple-600" />
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-100 to-purple-200 rounded-full flex items-center justify-center group-hover:from-purple-200 group-hover:to-purple-300 transition-all duration-300 shadow-inner border-2 border-purple-300">
+                      <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:w-5 sm:h-5 text-purple-600" />
                     </div>
                     <div className="text-left">
-                      <div className="font-bold text-base text-black">
+                      <div className="font-bold text-sm sm:text-base text-black">
                         Add New Section
                       </div>
-                      <div className="text-purple-600 text-sm">
+                      <div className="text-purple-600 text-xs sm:text-sm">
                         Organize your form into multiple sections
                       </div>
                     </div>

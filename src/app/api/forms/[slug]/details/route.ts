@@ -43,23 +43,22 @@ export async function GET(
     }
 
     // Transform the data to ensure nested fields are properly structured
-  // app/api/forms/[slug]/details/route.ts
+    const transformField = (field: any) => {
+      return {
+        id: field.id,
+        type: field.type,
+        label: field.label,
+        placeholder: field.placeholder,
+        required: field.required,
+        options: field.options || [],
+        defaultValue: field.defaultValue || '',
+        order: field.order,
+        conditionalRules: field.conditionalRules || [],
+        nestedFields: (field.nestedFields || []).map(transformField),
+        customData: field.customData || {}
+      };
+    };
 
-const transformField = (field: any) => {
-  return {
-    id: field.id,
-    type: field.type,
-    label: field.label,
-    placeholder: field.placeholder,
-    required: field.required,
-    options: field.options || [],
-    defaultValue: field.defaultValue || '',
-    order: field.order,
-    conditionalRules: field.conditionalRules || [],
-    nestedFields: (field.nestedFields || []).map(transformField),
-    customData: field.customData || {} // ADD THIS LINE
-  };
-};
     const transformSection = (section: any) => {
       return {
         id: section.id,
@@ -71,9 +70,14 @@ const transformField = (field: any) => {
       };
     };
 
+    // FIXED: Properly handle images structure
+    const images = form.images || {};
+    const settings = form.settings || {};
+    
     const transformedForm = {
       _id: form._id,
       title: form.title,
+      form_name12: form.form_name12,
       description: form.description,
       sections: (form.sections || []).map(transformSection),
       theme: form.theme || {
@@ -82,21 +86,40 @@ const transformField = (field: any) => {
         textColor: '#1F2937',
         fontFamily: 'Inter'
       },
-      images: form.images || {},
+      images: {
+        logo: images.logo || '',
+        banner: images.banner || '',
+        background: images.background || '',
+        favicon: images.favicon || '' // FIXED: Access favicon properly
+      },
       settings: {
-        customSlug: form.settings?.customSlug,
-        allowMultipleResponses: form.settings?.allowMultipleResponses || false,
-        enableProgressSave: form.settings?.enableProgressSave || true,
-        showGroupLinks: form.settings?.showGroupLinks || false,
-        whatsappGroupLink: form.settings?.whatsappGroupLink || '',
-        arrataiGroupLink: form.settings?.arrataiGroupLink || ''
+        customSlug: settings.customSlug,
+        allowMultipleResponses: settings.allowMultipleResponses || false,
+        enableProgressSave: settings.enableProgressSave || true,
+        showGroupLinks: settings.showGroupLinks || false,
+        whatsappGroupLink: settings.whatsappGroupLink || '',
+        arrataiGroupLink: settings.arrataiGroupLink || '',
+        pageTitle: settings.pageTitle || form.title || 'Form',
+        isActive: settings.isActive !== false,
+        userType: settings.userType || 'swayamsevak',
+        validityDuration: settings.validityDuration || 1440,
+        maxResponses: settings.maxResponses || 1000,
+        collectEmail: settings.collectEmail !== false,
+        enableCustomSlug: settings.enableCustomSlug || false,
+        defaultSource: settings.defaultSource || ''
       },
       status: form.status,
       createdAt: form.createdAt,
       updatedAt: form.updatedAt
     };
 
-    console.log('Transformed form with defaultValue:', JSON.stringify(transformedForm, null, 2));
+    console.log('🔍 Form details fetched:', {
+      pageTitle: transformedForm.settings.pageTitle,
+      favicon: transformedForm.images.favicon,
+      hasFavicon: !!transformedForm.images.favicon,
+      imagesStructure: form.images,
+      title: transformedForm.title
+    });
 
     return NextResponse.json(transformedForm);
   } catch (error) {

@@ -1,4 +1,4 @@
-// app/api/forms/route.ts
+// app/api/forms/route.ts - Updated
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const form = new Form({
       title: title.trim(),
-      form_name12: title.trim(), // Initialize form_name with title
+      form_name12: title.trim(),
       description: description?.trim() || '',
       theme: theme || {
         primaryColor: '#7C3AED',
@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
         isActive: true,
         showGroupLinks: false,
         whatsappGroupLink: '',
-        arrataiGroupLink: ''
+        arrataiGroupLink: '',
+        pageTitle: title.trim() // Set initial page title
       },
       sections: [],
       status: 'draft',
@@ -103,22 +104,19 @@ export async function GET(request: NextRequest) {
       if (token) {
         try {
           const decoded = await verifyToken(token);
-          // Fetch forms created by this user
           forms = await Form.find({ createdBy: decoded.adminId })
             .sort({ updatedAt: -1 })
-            .select('-sections -theme'); // Exclude heavy fields for listing
+            .select('-sections -theme');
         } catch (error) {
-          // If token is invalid, return all forms (or handle as needed)
           forms = await Form.find().sort({ updatedAt: -1 }).select('-sections -theme');
         }
       } else {
         forms = await Form.find().sort({ updatedAt: -1 }).select('-sections -theme');
       }
 
-      // Add responses count to each form
       const formsWithCounts = forms.map(form => ({
         ...form.toObject(),
-        responsesCount: Math.floor(Math.random() * 100) // Replace with actual responses count from your database
+        responsesCount: Math.floor(Math.random() * 100)
       }));
 
       return NextResponse.json({ 
@@ -146,12 +144,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
     }
 
-    // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(formId)) {
       return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
     }
 
-    // Check if form exists
     const existingForm = await Form.findById(formId);
     if (!existingForm) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
@@ -167,16 +163,21 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Title must be less than 100 characters' }, { status: 400 });
     }
 
-    // Prepare update data - only allow specific fields to be updated
+    // Validate page title length if provided
+    if (updateData.settings?.pageTitle && updateData.settings.pageTitle.length > 60) {
+      return NextResponse.json({ error: 'Page title must be less than 60 characters' }, { status: 400 });
+    }
+
+    // Prepare update data
     const allowedFields = [
       'title',
-      'form_name12', // Make sure this is included
+      'form_name12',
       'description',
       'status',
       'settings',
       'theme',
       'sections',
-      'images' // FIXED: Added missing comma
+      'images'
     ];
 
     const safeUpdateData: any = {
@@ -194,29 +195,76 @@ export async function PUT(request: NextRequest) {
     if (safeUpdateData.title) safeUpdateData.title = safeUpdateData.title.trim();
     if (safeUpdateData.form_name12) safeUpdateData.form_name12 = safeUpdateData.form_name12.trim();
     if (safeUpdateData.description) safeUpdateData.description = safeUpdateData.description.trim();
+    if (safeUpdateData.settings?.pageTitle) safeUpdateData.settings.pageTitle = safeUpdateData.settings.pageTitle.trim();
+
+    // FIXED: Handle images merging properly
+ // In your PUT handler, update the images section:
+if (updateData.images) {
+  console.log('🖼️ Updating images - RAW DATA:', updateData.images);
+  
+  // FIXED: Handle nested images structure
+  let imagesToUpdate = updateData.images;
+  
+  // If images is nested (images.images), extract the inner images object
+  if (updateData.images.images && typeof updateData.images.images === 'object') {
+    console.log('🖼️ Detected nested images structure, extracting...');
+    imagesToUpdate = {
+      ...updateData.images.images,
+      ...updateData.images // Merge with top-level properties if any
+    };
+  }
+  
+  console.log('🖼️ Processed images for update:', imagesToUpdate);
+  
+  // Get existing images or create empty object
+  const existingImages = existingForm.images || {};
+  
+  // Merge images properly
+  safeUpdateData.images = {
+    logo: imagesToUpdate.logo !== undefined ? imagesToUpdate.logo : existingImages.logo || '',
+    banner: imagesToUpdate.banner !== undefined ? imagesToUpdate.banner : existingImages.banner || '',
+    background: imagesToUpdate.background !== undefined ? imagesToUpdate.background : existingImages.background || '',
+    favicon: imagesToUpdate.favicon !== undefined ? imagesToUpdate.favicon : existingImages.favicon || ''
+  };
+  
+  console.log('🖼️ Final merged images:', safeUpdateData.images);
+}
+
+    console.log('📦 Final update data:', {
+      images: safeUpdateData.images,
+      settings: safeUpdateData.settings,
+      theme: safeUpdateData.theme
+    });
 
     const form = await Form.findByIdAndUpdate(
       formId, 
       safeUpdateData,
       { 
-        new: true, // Return updated document
-        runValidators: true // Run schema validators
+        new: true,
+        runValidators: true
       }
     );
+
+    console.log('✅ Form updated successfully:', {
+      formId: form._id,
+      images: form.images,
+      hasFavicon: !!form.images?.favicon,
+      settings: form.settings
+    });
 
     return NextResponse.json({ 
       success: true, 
       form: {
         _id: form._id,
         title: form.title,
-        form_name12: form.form_name12, // Return the updated form_name12
+        form_name12: form.form_name12,
         description: form.description,
         status: form.status,
         createdAt: form.createdAt,
         updatedAt: form.updatedAt,
         settings: form.settings,
         theme: form.theme,
-        images: form.images, // Include images in response
+        images: form.images,
         sections: form.sections,
         createdBy: form.createdBy
       },
@@ -226,7 +274,6 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Form update error:', error);
     
-    // Handle mongoose validation errors
     if (error instanceof mongoose.Error.ValidationError) {
       const errors = Object.values(error.errors).map((err: any) => err.message);
       return NextResponse.json({ 
@@ -235,7 +282,6 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Handle duplicate key errors
     if (error.code === 11000) {
       return NextResponse.json({ 
         error: 'Form with this name already exists'
@@ -249,7 +295,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// Add DELETE endpoint
 export async function DELETE(request: NextRequest) {
   try {
     await dbConnect();
@@ -261,7 +306,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Form ID is required' }, { status: 400 });
     }
 
-    // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(formId)) {
       return NextResponse.json({ error: 'Invalid form ID format' }, { status: 400 });
     }

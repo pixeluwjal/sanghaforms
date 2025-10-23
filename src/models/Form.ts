@@ -1,4 +1,4 @@
-// models/Form.ts
+// models/Form.ts - FIXED Schema
 import mongoose from 'mongoose';
 
 const ConditionalRuleSchema = new mongoose.Schema({
@@ -92,23 +92,32 @@ const SettingsSchema = new mongoose.Schema({
   showGroupLinks: { type: Boolean, default: false },
   whatsappGroupLink: { type: String, default: '' },
   arrataiGroupLink: { type: String, default: '' },
-  // NEW: Add default source field
   defaultSource: {
+    type: String,
+    default: ''
+  },
+  pageTitle: {
     type: String,
     default: ''
   }
 });
 
+// FIXED: Proper images schema structure
 const FormSchema = new mongoose.Schema({
   title: { type: String, required: true },
   form_name12: { type: String, required: true },
   description: String,
   sections: [SectionSchema],
   theme: ThemeSchema,
+  // FIXED: Images as a proper subdocument with defaults
   images: {
-    logo: String,
-    banner: String,
-    background: String
+    type: {
+      logo: { type: String, default: '' },
+      banner: { type: String, default: '' },
+      background: { type: String, default: '' },
+      favicon: { type: String, default: '' }
+    },
+    default: () => ({}) // This ensures images is always an object
   },
   settings: SettingsSchema,
   status: {

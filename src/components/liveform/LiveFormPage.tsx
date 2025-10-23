@@ -54,6 +54,26 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     });
   }, [setValue]);
 
+  // Update document head with form title and favicon
+  useEffect(() => {
+    if (formData) {
+      // Set page title
+      const pageTitle = formData.settings?.pageTitle || formData.title || 'Form';
+      document.title = pageTitle;
+
+      // Set favicon if available
+      if (formData.images?.favicon) {
+        let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = formData.images.favicon;
+      }
+    }
+  }, [formData]);
+
   // Fetch form data
   useEffect(() => {
     const fetchForm = async () => {

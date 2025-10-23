@@ -17,10 +17,12 @@ export interface ILeadResponse extends mongoose.Document {
   leadScore: number;
   status: 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
   source: string;
+  // Organizational hierarchy fields
+  khanda: string;
+  valaya: string;
+  milanGhat: string;
   // Contact information extracted from form
   name?: string;
-  email?: string;
-  phone?: string;
   // Additional metadata
   ipAddress: string;
   userAgent: string;
@@ -46,10 +48,12 @@ const leadResponseSchema = new mongoose.Schema({
     default: 'new'
   },
   source: { type: String, default: 'form_submission' },
+  // Organizational hierarchy fields
+  khanda: { type: String, required: true },
+  valaya: { type: String, required: true },
+  milanGhat: { type: String, required: true },
   // Extracted contact info for easy access
   name: String,
-  email: String,
-  phone: String,
   // Metadata
   ipAddress: { type: String, required: true },
   userAgent: { type: String, required: true }
@@ -60,7 +64,9 @@ const leadResponseSchema = new mongoose.Schema({
 // Indexes for better query performance
 leadResponseSchema.index({ formId: 1, submittedAt: -1 });
 leadResponseSchema.index({ status: 1 });
-leadResponseSchema.index({ email: 1 });
+leadResponseSchema.index({ khanda: 1 });
+leadResponseSchema.index({ valaya: 1 });
+leadResponseSchema.index({ milanGhat: 1 });
 leadResponseSchema.index({ leadScore: -1 });
 
 export default mongoose.models.LeadResponse || mongoose.model<ILeadResponse>('LeadResponse', leadResponseSchema);
