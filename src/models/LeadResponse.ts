@@ -49,14 +49,14 @@ const leadResponseSchema = new mongoose.Schema({
   },
   source: { type: String, default: 'form_submission' },
   // Organizational hierarchy fields
-  khanda: { type: String, required: true },
-  valaya: { type: String, required: true },
-  milanGhat: { type: String, required: true },
+  khanda: { type: String, required: false },
+  valaya: { type: String, required: false },
+  milanGhat: { type: String, required: false },
   // Extracted contact info for easy access
   name: String,
   // Metadata
-  ipAddress: { type: String, required: true },
-  userAgent: { type: String, required: true }
+  ipAddress: { type: String, required: false },
+  userAgent: { type: String, required: false }
 }, {
   timestamps: { createdAt: 'submittedAt', updatedAt: 'updatedAt' }
 });
