@@ -126,15 +126,8 @@ const FieldRenderer = memo(function FieldRenderer({
             <span className={`block text-lg font-bold ${errors[fieldId] ? 'text-red-600' : 'text-green-800'} group-hover:text-green-900 transition-colors`}>
               WhatsApp Communication Consent {field.required && <span className="text-orange-600 ml-1">*</span>}
             </span>
-            <p className="text-green-700 text-base mt-2 leading-relaxed">
-              I opt-in to receive communication about the initiatives via WhatsApp group.
-            </p>
           </div>
         </label>
-        {errors[fieldId] && (
-          <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
-        )}
-        {renderNestedFields(field.nestedFields)}
       </div>
     );
   }
