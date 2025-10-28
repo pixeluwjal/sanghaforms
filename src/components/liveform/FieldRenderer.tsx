@@ -124,7 +124,7 @@ const FieldRenderer = memo(function FieldRenderer({
           </div>
           <div className="flex-1 min-w-0">
             <span className={`block text-lg font-bold ${errors[fieldId] ? 'text-red-600' : 'text-green-800'} group-hover:text-green-900 transition-colors`}>
-              WhatsApp Communication Consent {field.required && <span className="text-orange-600 ml-1">*</span>}
+              I opt-in to receive communication about the initiatives via WhatsApp group {field.required && <span className="text-orange-600 ml-1">*</span>}
             </span>
           </div>
         </label>
