@@ -33,7 +33,7 @@ const FieldConditionalRuleSchema = new mongoose.Schema({
 });
 
 const FieldSchema = new mongoose.Schema({
-  id: String,
+  id: { type: String, required: true }, // ✅ Ensure id is always present
   type: {
     type: String,
     enum: [
@@ -75,6 +75,7 @@ const ThemeSchema = new mongoose.Schema({
   fontFamily: { type: String, default: 'Inter' }
 });
 
+// models/Form.ts - Add conditionalGroupLinks to SettingsSchema
 const SettingsSchema = new mongoose.Schema({
   userType: {
     type: String,
@@ -92,6 +93,18 @@ const SettingsSchema = new mongoose.Schema({
   showGroupLinks: { type: Boolean, default: false },
   whatsappGroupLink: { type: String, default: '' },
   arrataiGroupLink: { type: String, default: '' },
+  enableConditionalLinks: { type: Boolean, default: false },
+  conditionalGroupLinks: [{
+    id: String,
+    fieldId: String,
+    fieldValue: String,
+    platform: {
+      type: String,
+      enum: ['whatsapp', 'arratai'],
+      default: 'whatsapp'
+    },
+    groupLink: String
+  }],
   defaultSource: {
     type: String,
     default: ''

@@ -1,4 +1,4 @@
-// app/api/forms/[slug]/details/route.ts
+// app/api/forms/[slug]/details/route.ts - UPDATED
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Form from '@/models/Form';
@@ -74,6 +74,7 @@ export async function GET(
     const images = form.images || {};
     const settings = form.settings || {};
     
+    // 🆕 CRITICAL FIX: Include conditionalGroupLinks and enableConditionalLinks
     const transformedForm = {
       _id: form._id,
       title: form.title,
@@ -90,9 +91,14 @@ export async function GET(
         logo: images.logo || '',
         banner: images.banner || '',
         background: images.background || '',
-        favicon: images.favicon || '' // FIXED: Access favicon properly
+        favicon: images.favicon || ''
       },
       settings: {
+        // 🆕 ADD THESE CRITICAL FIELDS:
+        enableConditionalLinks: settings.enableConditionalLinks || false,
+        conditionalGroupLinks: settings.conditionalGroupLinks || [],
+        
+        // Existing fields:
         customSlug: settings.customSlug,
         allowMultipleResponses: settings.allowMultipleResponses || false,
         enableProgressSave: settings.enableProgressSave || true,
@@ -117,8 +123,10 @@ export async function GET(
       pageTitle: transformedForm.settings.pageTitle,
       favicon: transformedForm.images.favicon,
       hasFavicon: !!transformedForm.images.favicon,
-      imagesStructure: form.images,
-      title: transformedForm.title
+      // 🆕 LOG CONDITIONAL LINKS:
+      enableConditionalLinks: transformedForm.settings.enableConditionalLinks,
+      conditionalGroupLinksCount: transformedForm.settings.conditionalGroupLinks?.length,
+      conditionalGroupLinks: transformedForm.settings.conditionalGroupLinks
     });
 
     return NextResponse.json(transformedForm);

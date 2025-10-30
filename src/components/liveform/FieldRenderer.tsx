@@ -27,12 +27,12 @@ const FieldRenderer = memo(function FieldRenderer({
   }
 
   const isNested = level > 0;
-  const fieldWrapperClass = `mb-6 ${isNested ? 'ml-4 md:ml-6' : ''}`;
-  const labelClass = `block text-sm font-semibold text-gray-800 mb-3 ${
+  const fieldWrapperClass = `mb-8 ${isNested ? 'ml-6 md:ml-8 border-l-2 border-orange-200 pl-6 md:pl-8' : ''}`;
+  const labelClass = `block text-lg font-bold mb-4 ${
     errors[fieldId] ? 'text-red-600' : 'text-gray-800'
   }`;
-  const inputBaseClass = `w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all duration-200 bg-white text-gray-900 shadow-sm placeholder-gray-400 hover:border-orange-300 ${
-    errors[fieldId] ? 'border-red-500 focus:border-red-500' : ''
+  const inputBaseClass = `w-full px-5 py-4 border-2 border-orange-200 rounded-2xl focus:ring-4 focus:ring-orange-500/30 focus:border-orange-500 transition-all duration-300 bg-white text-gray-900 shadow-lg placeholder-gray-500 hover:border-orange-300 text-lg ${
+    errors[fieldId] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : ''
   }`;
 
   // Set default value for readonly_text fields when component mounts
@@ -68,9 +68,9 @@ const FieldRenderer = memo(function FieldRenderer({
     }
     
     return (
-      <div className={`mt-6 space-y-6 ${level > 0 ? 'ml-4 md:ml-6' : ''}`}>
+      <div className={`mt-8 space-y-8 ${level > 0 ? 'ml-6 md:ml-8' : ''}`}>
         {visibleNestedFields.map((nestedField: any) => (
-          <div key={nestedField.id}>
+          <div key={nestedField.id} className="animate-fade-in-up">
             <FieldRenderer
               field={nestedField}
               register={register}
@@ -91,7 +91,7 @@ const FieldRenderer = memo(function FieldRenderer({
   // Special handling for Sangha field type
   if (field.type === 'sangha') {
     return (
-      <div key={fieldId} className={fieldWrapperClass}>
+      <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
         <SanghaHierarchyField 
           field={field}
           onFieldChange={handleFieldChange}
@@ -105,9 +105,9 @@ const FieldRenderer = memo(function FieldRenderer({
   // Special handling for WhatsApp Opt-in
   if (field.type === 'whatsapp_optin') {
     return (
-      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 shadow-lg hover:shadow-xl hover:border-green-400 transition-all duration-300`}>
-        <label className="flex items-start space-x-4 cursor-pointer group">
-          <div className="flex-shrink-0 mt-1">
+      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-green-50 to-emerald-50 border-3 border-green-400 rounded-3xl p-8 shadow-2xl hover:shadow-3xl hover:border-green-500 transition-all duration-500 group animate-fade-in-up`}>
+        <label className="flex items-start space-x-6 cursor-pointer group">
+          <div className="flex-shrink-0 mt-2">
             <input
               type="checkbox"
               {...register(fieldId, {
@@ -118,16 +118,19 @@ const FieldRenderer = memo(function FieldRenderer({
                 handleFieldChange(fieldId, e.target.checked.toString());
               }}
             />
-            <div className="w-6 h-6 flex items-center justify-center border-2 border-green-500 rounded-lg transition-all duration-200 peer-checked:bg-green-500 peer-checked:border-green-500 group-hover:border-green-600 shadow-sm">
-              <span className="text-white text-sm font-bold hidden peer-checked:block">✓</span>
+            <div className="w-8 h-8 flex items-center justify-center border-3 border-green-500 rounded-xl transition-all duration-300 peer-checked:bg-green-500 peer-checked:border-green-500 group-hover:border-green-600 shadow-lg group-hover:scale-110">
+              <span className="text-white text-lg font-bold hidden peer-checked:block">✓</span>
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <span className={`block text-lg font-bold ${errors[fieldId] ? 'text-red-600' : 'text-green-800'} group-hover:text-green-900 transition-colors`}>
+            <span className={`block text-xl font-bold ${errors[fieldId] ? 'text-red-600' : 'text-green-800'} group-hover:text-green-900 transition-colors`}>
               I opt-in to receive communication about the initiatives via WhatsApp group {field.required && <span className="text-orange-600 ml-1">*</span>}
             </span>
           </div>
         </label>
+        {errors[fieldId] && (
+          <p className="mt-4 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
+        )}
       </div>
     );
   }
@@ -135,9 +138,9 @@ const FieldRenderer = memo(function FieldRenderer({
   // Special handling for ArratAI Opt-in
   if (field.type === 'arratai_optin') {
     return (
-      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-400 rounded-xl p-6 shadow-lg hover:shadow-xl hover:border-orange-500 transition-all duration-300`}>
-        <label className="flex items-start space-x-4 cursor-pointer group">
-          <div className="flex-shrink-0 mt-1">
+      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-orange-50 to-amber-50 border-3 border-orange-500 rounded-3xl p-8 shadow-2xl hover:shadow-3xl hover:border-orange-600 transition-all duration-500 group animate-fade-in-up`}>
+        <label className="flex items-start space-x-6 cursor-pointer group">
+          <div className="flex-shrink-0 mt-2">
             <input
               type="checkbox"
               {...register(fieldId, {
@@ -148,21 +151,21 @@ const FieldRenderer = memo(function FieldRenderer({
                 handleFieldChange(fieldId, e.target.checked.toString());
               }}
             />
-            <div className="w-6 h-6 flex items-center justify-center border-2 border-orange-500 rounded-lg transition-all duration-200 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-600 shadow-sm">
-              <span className="text-white text-sm font-bold hidden peer-checked:block">✓</span>
+            <div className="w-8 h-8 flex items-center justify-center border-3 border-orange-500 rounded-xl transition-all duration-300 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-600 shadow-lg group-hover:scale-110">
+              <span className="text-white text-lg font-bold hidden peer-checked:block">✓</span>
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <span className={`block text-lg font-bold ${errors[fieldId] ? 'text-red-600' : 'text-orange-800'} group-hover:text-orange-900 transition-colors`}>
-              ArratAI Community Consent {field.required && <span className="text-orange-600 ml-1">*</span>}
+            <span className={`block text-xl font-bold ${errors[fieldId] ? 'text-red-600' : 'text-orange-800'} group-hover:text-orange-900 transition-colors`}>
+              🤖 ArratAI Community Consent {field.required && <span className="text-orange-600 ml-1">*</span>}
             </span>
-            <p className="text-orange-700 text-base mt-2 leading-relaxed">
-              I opt-in to receive communication about the initiatives via ArratAI community.
+            <p className="text-orange-700 text-lg mt-3 leading-relaxed font-medium">
+              I opt-in to receive communication about the initiatives via ArratAI community platform
             </p>
           </div>
         </label>
         {errors[fieldId] && (
-          <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+          <p className="mt-4 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
         )}
         {renderNestedFields(field.nestedFields)}
       </div>
@@ -172,7 +175,7 @@ const FieldRenderer = memo(function FieldRenderer({
   // Handle readonly_text field type
   if (field.type === 'readonly_text') {
     return (
-      <div key={fieldId} className={fieldWrapperClass}>
+      <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
         <label htmlFor={fieldId} className={labelClass}>
           {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
         </label>
@@ -183,12 +186,12 @@ const FieldRenderer = memo(function FieldRenderer({
             required: field.required && `${field.label} is required`
           })}
           defaultValue={field.defaultValue || ''}
-          className={`${inputBaseClass} bg-gray-100 cursor-not-allowed opacity-80`}
+          className={`${inputBaseClass} bg-gray-100 cursor-not-allowed opacity-80 border-orange-300`}
           readOnly
           disabled
         />
         {errors[fieldId] && (
-          <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+          <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
         )}
         {renderNestedFields(field.nestedFields)}
       </div>
@@ -274,7 +277,7 @@ const FieldRenderer = memo(function FieldRenderer({
     }, [formData?.settings?.defaultSource, fieldId, setValue, handleFieldChange, getValues]);
 
     return (
-      <div key={fieldId} className={fieldWrapperClass}>
+      <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
         <label htmlFor={fieldId} className={labelClass}>
           {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
         </label>
@@ -284,7 +287,7 @@ const FieldRenderer = memo(function FieldRenderer({
             {...register(fieldId, { 
               required: field.required && `${field.label} is required` 
             })}
-            className={`${inputBaseClass} appearance-none bg-white pr-12 cursor-pointer hover:border-orange-400 transition-colors ${
+            className={`${inputBaseClass} appearance-none bg-white pr-16 cursor-pointer hover:border-orange-400 transition-colors ${
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             onChange={(e) => {
@@ -303,11 +306,11 @@ const FieldRenderer = memo(function FieldRenderer({
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-5 text-gray-700">
             {isLoading ? (
-              <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-6 h-6 border-3 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
             ) : (
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+              <svg className="w-6 h-6 fill-current text-orange-500" viewBox="0 0 20 20">
                 <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
               </svg>
             )}
@@ -315,17 +318,19 @@ const FieldRenderer = memo(function FieldRenderer({
         </div>
         
         {isLoading && (
-          <p className="mt-2 text-sm text-gray-600">Loading sources...</p>
+          <p className="mt-3 text-base text-orange-600 font-medium bg-orange-50 px-4 py-3 rounded-xl">
+            🔄 Loading sources...
+          </p>
         )}
         
         {formData?.settings?.defaultSource && (
-          <p className="mt-2 text-sm text-green-600">
-            Default source: <strong>{formData.settings.defaultSource}</strong>
+          <p className="mt-3 text-base text-green-600 font-medium bg-green-50 px-4 py-3 rounded-xl">
+            ✅ Default source: <strong>{formData.settings.defaultSource}</strong>
           </p>
         )}
         
         {errors[fieldId] && (
-          <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+          <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
         )}
         
         {renderNestedFields(field.nestedFields)}
@@ -336,14 +341,14 @@ const FieldRenderer = memo(function FieldRenderer({
   // Render checkbox groups with nested fields
   if (field.type === 'checkbox' && field.options && field.options.length > 0) {
     return (
-      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-gray-50 border-2 border-orange-300 rounded-xl p-6 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 group`}>
-        <label className={`block text-lg font-bold mb-6 ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-orange-700 transition-colors`}>
+      <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-orange-50 border-3 border-orange-400 rounded-3xl p-8 shadow-2xl hover:shadow-3xl hover:border-orange-500 transition-all duration-500 group animate-fade-in-up`}>
+        <label className={`block text-xl font-bold mb-8 ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-orange-700 transition-colors`}>
           {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
         </label>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {field.options.map((option, index) => (
             <div key={index}>
-              <label className="flex items-start space-x-4 cursor-pointer text-gray-700 hover:text-gray-900 group/option p-3 rounded-lg hover:bg-orange-50 transition-all duration-200">
+              <label className="flex items-start space-x-5 cursor-pointer text-gray-700 hover:text-gray-900 group/option p-4 rounded-2xl hover:bg-orange-100 transition-all duration-300 border-2 border-transparent hover:border-orange-300">
                 <div className="flex-shrink-0 mt-1">
                   <input
                     type="checkbox"
@@ -363,11 +368,11 @@ const FieldRenderer = memo(function FieldRenderer({
                       handleFieldChange(fieldId, newValues);
                     }}
                   />
-                  <div className="w-6 h-6 flex items-center justify-center border-2 border-orange-400 rounded-lg transition-all duration-200 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover/option:border-orange-500 shadow-sm">
-                    <span className="text-white text-sm font-bold hidden peer-checked:block">✓</span>
+                  <div className="w-7 h-7 flex items-center justify-center border-3 border-orange-500 rounded-xl transition-all duration-300 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover/option:border-orange-600 shadow-lg group-hover/option:scale-110">
+                    <span className="text-white text-base font-bold hidden peer-checked:block">✓</span>
                   </div>
                 </div>
-                <span className="text-base font-medium leading-relaxed flex-1 min-w-0">{option}</span>
+                <span className="text-lg font-semibold leading-relaxed flex-1 min-w-0">{option}</span>
               </label>
               
               {/* Render nested fields for this specific option if it's "Others" */}
@@ -376,7 +381,7 @@ const FieldRenderer = memo(function FieldRenderer({
           ))}
         </div>
         {errors[fieldId] && (
-          <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+          <p className="mt-4 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
         )}
       </div>
     );
@@ -387,7 +392,7 @@ const FieldRenderer = memo(function FieldRenderer({
     case 'text':
     case 'email':
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label htmlFor={fieldId} className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
@@ -410,7 +415,7 @@ const FieldRenderer = memo(function FieldRenderer({
             }}
           />
           {errors[fieldId] && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -418,7 +423,7 @@ const FieldRenderer = memo(function FieldRenderer({
 
     case 'number':
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label htmlFor={fieldId} className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
@@ -446,7 +451,7 @@ const FieldRenderer = memo(function FieldRenderer({
             }}
           />
           {errors[fieldId] && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -454,7 +459,7 @@ const FieldRenderer = memo(function FieldRenderer({
 
     case 'textarea':
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label htmlFor={fieldId} className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
@@ -463,15 +468,15 @@ const FieldRenderer = memo(function FieldRenderer({
             {...register(fieldId, { 
               required: field.required && `${field.label} is required` 
             })}
-            rows={4}
-            className={`${inputBaseClass} resize-vertical min-h-[120px]`}
+            rows={5}
+            className={`${inputBaseClass} resize-vertical min-h-[140px] text-lg leading-relaxed`}
             placeholder={field.placeholder}
             onChange={(e) => {
               handleFieldChange(fieldId, e.target.value);
             }}
           />
           {errors[fieldId] && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -479,7 +484,7 @@ const FieldRenderer = memo(function FieldRenderer({
 
     case 'select':
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label htmlFor={fieldId} className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
@@ -489,7 +494,7 @@ const FieldRenderer = memo(function FieldRenderer({
               {...register(fieldId, { 
                 required: field.required && `${field.label} is required` 
               })}
-              className={`${inputBaseClass} appearance-none bg-white pr-12 cursor-pointer hover:border-orange-400 transition-colors`}
+              className={`${inputBaseClass} appearance-none bg-white pr-16 cursor-pointer hover:border-orange-400 transition-colors`}
               onChange={(e) => {
                 handleFieldChange(fieldId, e.target.value);
               }}
@@ -501,14 +506,14 @@ const FieldRenderer = memo(function FieldRenderer({
                 </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-5 text-gray-700">
+              <svg className="w-6 h-6 fill-current text-orange-500" viewBox="0 0 20 20">
                 <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
               </svg>
             </div>
           </div>
           {errors[fieldId] && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -516,13 +521,13 @@ const FieldRenderer = memo(function FieldRenderer({
 
     case 'radio':
       return (
-        <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-gray-50 border-2 border-orange-300 rounded-xl p-6 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 group`}>
-          <label className={`block text-lg font-bold mb-6 ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-orange-700 transition-colors`}>
+        <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-orange-50 border-3 border-orange-400 rounded-3xl p-8 shadow-2xl hover:shadow-3xl hover:border-orange-500 transition-all duration-500 group animate-fade-in-up`}>
+          <label className={`block text-xl font-bold mb-8 ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-orange-700 transition-colors`}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {field.options?.map((option, index) => (
-              <label key={index} className="flex items-start space-x-4 cursor-pointer text-gray-700 hover:text-gray-900 group/option p-3 rounded-lg hover:bg-orange-50 transition-all duration-200">
+              <label key={index} className="flex items-start space-x-5 cursor-pointer text-gray-700 hover:text-gray-900 group/option p-4 rounded-2xl hover:bg-orange-100 transition-all duration-300 border-2 border-transparent hover:border-orange-300">
                 <div className="flex-shrink-0 mt-1">
                   <input
                     type="radio"
@@ -535,16 +540,16 @@ const FieldRenderer = memo(function FieldRenderer({
                       handleFieldChange(fieldId, e.target.value);
                     }}
                   />
-                  <div className="w-6 h-6 flex items-center justify-center border-2 border-orange-400 rounded-full transition-all duration-200 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover/option:border-orange-500 shadow-sm">
-                    <span className="w-2 h-2 bg-white rounded-full hidden peer-checked:block"></span>
+                  <div className="w-7 h-7 flex items-center justify-center border-3 border-orange-500 rounded-full transition-all duration-300 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover/option:border-orange-600 shadow-lg group-hover/option:scale-110">
+                    <span className="w-3 h-3 bg-white rounded-full hidden peer-checked:block"></span>
                   </div>
                 </div>
-                <span className="text-base font-medium leading-relaxed flex-1 min-w-0">{option}</span>
+                <span className="text-lg font-semibold leading-relaxed flex-1 min-w-0">{option}</span>
               </label>
             ))}
           </div>
           {errors[fieldId] && (
-            <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-4 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -553,9 +558,9 @@ const FieldRenderer = memo(function FieldRenderer({
     case 'checkbox':
       // Single checkbox (without options array)
       return (
-        <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-gray-50 border-2 border-orange-300 rounded-xl p-6 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 group`}>
-          <label className="flex items-start space-x-4 cursor-pointer group">
-            <div className="flex-shrink-0 mt-1">
+        <div key={fieldId} className={`${fieldWrapperClass} bg-gradient-to-br from-white to-orange-50 border-3 border-orange-400 rounded-3xl p-8 shadow-2xl hover:shadow-3xl hover:border-orange-500 transition-all duration-500 group animate-fade-in-up`}>
+          <label className="flex items-start space-x-6 cursor-pointer group">
+            <div className="flex-shrink-0 mt-2">
               <input
                 type="checkbox"
                 {...register(fieldId, {
@@ -566,21 +571,21 @@ const FieldRenderer = memo(function FieldRenderer({
                   handleFieldChange(fieldId, e.target.checked.toString());
                 }}
               />
-              <div className="w-6 h-6 flex items-center justify-center border-2 border-orange-400 rounded-lg transition-all duration-200 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-500 shadow-sm">
-                <span className="text-white text-sm font-bold hidden peer-checked:block">✓</span>
+              <div className="w-8 h-8 flex items-center justify-center border-3 border-orange-500 rounded-xl transition-all duration-300 peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-600 shadow-lg group-hover:scale-110">
+                <span className="text-white text-lg font-bold hidden peer-checked:block">✓</span>
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <span className={`block text-lg font-bold ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-gray-900 transition-colors`}>
+              <span className={`block text-xl font-bold ${errors[fieldId] ? 'text-red-600' : 'text-gray-800'} group-hover:text-gray-900 transition-colors`}>
                 {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
               </span>
               {field.placeholder && (
-                <p className="text-gray-600 text-base mt-2 leading-relaxed">{field.placeholder}</p>
+                <p className="text-gray-600 text-lg mt-3 leading-relaxed font-medium">{field.placeholder}</p>
               )}
             </div>
           </label>
           {errors[fieldId] && (
-            <p className="mt-3 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-4 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -588,7 +593,7 @@ const FieldRenderer = memo(function FieldRenderer({
 
     case 'date':
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label htmlFor={fieldId} className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
@@ -604,7 +609,7 @@ const FieldRenderer = memo(function FieldRenderer({
             }}
           />
           {errors[fieldId] && (
-            <p className="mt-2 text-sm text-red-600 font-medium">{errors[fieldId]?.message as string}</p>
+            <p className="mt-3 text-base text-red-600 font-bold bg-red-50 px-4 py-3 rounded-xl">{errors[fieldId]?.message as string}</p>
           )}
           {renderNestedFields(field.nestedFields)}
         </div>
@@ -612,7 +617,7 @@ const FieldRenderer = memo(function FieldRenderer({
 
     default:
       return (
-        <div key={fieldId} className={fieldWrapperClass}>
+        <div key={fieldId} className={`${fieldWrapperClass} animate-fade-in-up`}>
           <label className={labelClass}>
             {field.label} {field.required && <span className="text-orange-600 ml-1">*</span>}
           </label>
