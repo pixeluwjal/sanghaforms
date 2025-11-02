@@ -15,6 +15,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -384,6 +385,21 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }, 50);
   };
 
+  // Handle redirect after success screen is shown
+  useEffect(() => {
+    if (submitStatus === 'success' && redirectUrl) {
+      console.log('🔄 Success screen shown, preparing to redirect...');
+      
+      // Redirect after a short delay to show success message
+      const redirectTimer = setTimeout(() => {
+        console.log('🚀 REDIRECTING TO:', redirectUrl);
+        window.location.href = redirectUrl;
+      }, 2000); // 2 seconds delay to show success message
+
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [submitStatus, redirectUrl]);
+
   const onSubmit = async (data: any) => {
     try {
       setSubmitting(true);
@@ -482,19 +498,20 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
       
       // 🎯 Get redirect URL based on conditional rules and form responses
       console.log('🔍 Checking for redirect URL...');
-      const redirectUrl = getRedirectUrl(data);
-      console.log('Final Redirect URL:', redirectUrl);
+      const calculatedRedirectUrl = getRedirectUrl(data);
+      console.log('Final Redirect URL:', calculatedRedirectUrl);
       
-      if (redirectUrl) {
-        console.log('🚀 REDIRECTING TO:', redirectUrl);
-        // Force redirect immediately
-        window.location.href = redirectUrl;
-        return;
+      if (calculatedRedirectUrl) {
+        console.log('🎯 Redirect URL found, setting success state first...');
+        // Set the redirect URL and show success screen first
+        setRedirectUrl(calculatedRedirectUrl);
+        setSubmitStatus('success');
+        // The useEffect will handle the redirect after showing success screen
+      } else {
+        // If no redirect, show success screen only
+        console.log('📄 No redirect URL found, showing success screen only');
+        setSubmitStatus('success');
       }
-      
-      // If no redirect, show success screen
-      console.log('📄 No redirect URL found, showing success screen');
-      setSubmitStatus('success');
       
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -523,7 +540,12 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
   }
 
   if (submitStatus === 'success') {
-    return <SuccessScreen formData={formData} />;
+    return (
+      <SuccessScreen 
+        formData={formData} 
+        redirectUrl={redirectUrl}
+      />
+    );
   }
 
   // Create properly sorted sections for rendering
