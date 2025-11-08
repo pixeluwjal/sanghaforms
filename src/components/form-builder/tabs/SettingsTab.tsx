@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
-import { Settings, Loader2 } from "lucide-react";
+import { Settings, Loader2, CreditCard } from "lucide-react";
 import toast from "react-hot-toast";
 import { debounce } from "lodash";
 
@@ -18,6 +18,7 @@ import ThemeCustomization from "../settings/ThemeCustomization";
 import FormFeatures from "../settings/FormFeatures";
 import FormAccessSection from "../settings/FormAccessSection";
 import ActionSection from "../settings/ActionSection";
+import PaymentSection from "../settings/PaymentSection";
 
 // Constants
 const BASE_FORM_PATH = "/forms/";
@@ -43,7 +44,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
     arrataiGroupLink: "",
     showGroupLinks: false,
     defaultSource: "",
-    pageTitle: form.title || ""
+    pageTitle: form.title || "",
+    // Payment settings
+    acceptPayments: false,
+    paymentAmount: 0,
+    paymentCurrency: "INR",
+    paymentDescription: ""
   };
 
   const defaultTheme: Theme = {
@@ -213,7 +219,9 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       defaultSource: settings.defaultSource,
       pageTitle: settings.pageTitle,
       hasFavicon: !!form.images?.favicon,
-      images: form.images
+      images: form.images,
+      acceptPayments: settings.acceptPayments,
+      paymentAmount: settings.paymentAmount
     });
 
     setSaveStatus("loading");
@@ -253,6 +261,17 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       }
     }
 
+    // Payment validation
+    if (newStatus === "published" && settings.acceptPayments) {
+      if (!settings.paymentAmount || settings.paymentAmount <= 0) {
+        setSaveStatus("error");
+        setStatusMessage("Invalid payment amount");
+        toast.error("Please set a valid payment amount greater than 0.");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+        return;
+      }
+    }
+
     // Prepare payload
     const payload = {
       formId: form._id,
@@ -269,7 +288,11 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
       images: form.images || {}
     };
 
-    console.log("📦 Sending payload with images:", payload.images);
+    console.log("📦 Sending payload with payment settings:", {
+      acceptPayments: settings.acceptPayments,
+      paymentAmount: settings.paymentAmount,
+      paymentCurrency: settings.paymentCurrency
+    });
 
     try {
       setStatusMessage("Saving to server...");
@@ -375,6 +398,12 @@ export default function SettingsTab({ form, onUpdate }: SettingsTabProps) {
         settings={settings}
         onImagesUpdate={handleImagesUpdate}
         onPageTitleUpdate={handlePageTitleUpdate}
+      />
+
+      {/* Payment Section - NEW */}
+      <PaymentSection 
+        settings={settings}
+        onUpdate={updateSettings}
       />
 
       {/* Collection Type Section */}

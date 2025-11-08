@@ -1,21 +1,42 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import LoadingState from './LoadingState';
-import FormHeader from './FormHeader';
-import FormSection from './FormSection';
-import SuccessScreen from './SuccessScreen';
-import { LiveFormPageProps, FormData, FormSection as FormSectionType, ConditionalGroupLink } from './types';
+import { useState, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import LoadingState from "./LoadingState";
+import FormHeader from "./FormHeader";
+import FormSection from "./FormSection";
+import SuccessScreen from "./SuccessScreen";
+import {
+  LiveFormPageProps,
+  FormData,
+  FormSection as FormSectionType,
+  ConditionalGroupLink,
+} from "./types";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+interface PaymentData {
+  submissionId: string;
+  formResponses: any;
+}
 
 export default function LiveFormPage({ slug }: LiveFormPageProps) {
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(
+    new Set()
+  );
   const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
 
   const {
     register,
@@ -24,147 +45,247 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     formState: { errors },
     getValues,
     setValue,
-    trigger
+    trigger,
   } = useForm();
 
   // Function to set default values for all fields
-  const setDefaultValues = useCallback((data: FormData) => {
-    if (!data.sections) return;
-    
-    const setFieldDefaults = (fields: any[]) => {
-      fields.forEach((field: any) => {
-        if (field.defaultValue) {
-          console.log(`Setting default value for ${field.id}: ${field.defaultValue}`);
-          setValue(field.id, field.defaultValue);
-        }
-        
-        if (field.nestedFields && field.nestedFields.length > 0) {
-          setFieldDefaults(field.nestedFields);
+  const setDefaultValues = useCallback(
+    (data: FormData) => {
+      if (!data.sections) return;
+
+      const setFieldDefaults = (fields: any[]) => {
+        fields.forEach((field: any) => {
+          if (field.defaultValue) {
+            console.log(
+              `Setting default value for ${field.id}: ${field.defaultValue}`
+            );
+            setValue(field.id, field.defaultValue);
+          }
+
+          if (field.nestedFields && field.nestedFields.length > 0) {
+            setFieldDefaults(field.nestedFields);
+          }
+        });
+      };
+
+      data.sections.forEach((section: FormSectionType) => {
+        if (section.fields && section.fields.length > 0) {
+          setFieldDefaults(section.fields);
         }
       });
-    };
-
-    data.sections.forEach((section: FormSectionType) => {
-      if (section.fields && section.fields.length > 0) {
-        setFieldDefaults(section.fields);
-      }
-    });
-  }, [setValue]);
+    },
+    [setValue]
+  );
 
   // Function to get conditional group link based on form responses
-  const getConditionalGroupLink = useCallback((formResponses: any, currentFormData: FormData | null) => {
-    if (!currentFormData?.settings?.conditionalGroupLinks || !currentFormData.settings.enableConditionalLinks) {
-      console.log('❌ Conditional links not enabled or no conditional links found');
+  const getConditionalGroupLink = useCallback(
+    (formResponses: any, currentFormData: FormData | null) => {
+      if (
+        !currentFormData?.settings?.conditionalGroupLinks ||
+        !currentFormData.settings.enableConditionalLinks
+      ) {
+        console.log(
+          "❌ Conditional links not enabled or no conditional links found"
+        );
+        return null;
+      }
+
+      console.log("🔍 Checking conditional group links...");
+      console.log("Form responses:", formResponses);
+      console.log(
+        "Conditional links:",
+        currentFormData.settings.conditionalGroupLinks
+      );
+
+      // Find the first matching condition
+      const matchingLink = currentFormData.settings.conditionalGroupLinks.find(
+        (link: ConditionalGroupLink) => {
+          const fieldValue = formResponses[link.fieldId];
+          console.log(
+            `Checking condition: field ${link.fieldId} = ${fieldValue}, expected: ${link.fieldValue}`
+          );
+
+          const matches = fieldValue === link.fieldValue;
+          console.log(`Condition matches: ${matches}`);
+
+          return matches;
+        }
+      );
+
+      if (matchingLink) {
+        console.log("✅ Found matching conditional link:", matchingLink);
+        return {
+          platform: matchingLink.platform,
+          url: matchingLink.groupLink,
+        };
+      }
+
+      console.log("❌ No matching conditional link found");
       return null;
-    }
-
-    console.log('🔍 Checking conditional group links...');
-    console.log('Form responses:', formResponses);
-    console.log('Conditional links:', currentFormData.settings.conditionalGroupLinks);
-
-    // Find the first matching condition
-    const matchingLink = currentFormData.settings.conditionalGroupLinks.find((link: ConditionalGroupLink) => {
-      const fieldValue = formResponses[link.fieldId];
-      console.log(`Checking condition: field ${link.fieldId} = ${fieldValue}, expected: ${link.fieldValue}`);
-      
-      const matches = fieldValue === link.fieldValue;
-      console.log(`Condition matches: ${matches}`);
-      
-      return matches;
-    });
-
-    if (matchingLink) {
-      console.log('✅ Found matching conditional link:', matchingLink);
-      return {
-        platform: matchingLink.platform,
-        url: matchingLink.groupLink
-      };
-    }
-
-    console.log('❌ No matching conditional link found');
-    return null;
-  }, []);
+    },
+    []
+  );
 
   // Function to check if user opted in to platform
-  const getUserPlatformOptin = useCallback((formResponses: any, currentFormData: FormData | null) => {
-    if (!currentFormData?.sections) return { whatsappOptin: false, arrataiOptin: false };
+  const getUserPlatformOptin = useCallback(
+    (formResponses: any, currentFormData: FormData | null) => {
+      if (!currentFormData?.sections)
+        return { whatsappOptin: false, arrataiOptin: false };
 
-    let whatsappOptin = false;
-    let arrataiOptin = false;
+      let whatsappOptin = false;
+      let arrataiOptin = false;
 
-    currentFormData.sections.forEach((section: FormSectionType) => {
-      section.fields?.forEach((field: any) => {
-        const responseValue = formResponses[field.id];
-        
-        if (field.type === 'whatsapp_optin' && responseValue === 'true') {
-          whatsappOptin = true;
-          console.log(`✅ User opted in to WhatsApp via field: ${field.id}`);
-        }
-        
-        if (field.type === 'arratai_optin' && responseValue === 'true') {
-          arrataiOptin = true;
-          console.log(`✅ User opted in to Arratai via field: ${field.id}`);
-        }
+      currentFormData.sections.forEach((section: FormSectionType) => {
+        section.fields?.forEach((field: any) => {
+          const responseValue = formResponses[field.id];
+
+          if (field.type === "whatsapp_optin" && responseValue === "true") {
+            whatsappOptin = true;
+            console.log(`✅ User opted in to WhatsApp via field: ${field.id}`);
+          }
+
+          if (field.type === "arratai_optin" && responseValue === "true") {
+            arrataiOptin = true;
+            console.log(`✅ User opted in to Arratai via field: ${field.id}`);
+          }
+        });
       });
-    });
 
-    console.log('User platform opt-ins:', { whatsappOptin, arrataiOptin });
-    return { whatsappOptin, arrataiOptin };
-  }, []);
+      console.log("User platform opt-ins:", { whatsappOptin, arrataiOptin });
+      return { whatsappOptin, arrataiOptin };
+    },
+    []
+  );
 
-  // Function to determine redirect URL - FIXED with proper dependencies
-  const getRedirectUrl = useCallback((formResponses: any) => {
-    console.log('🎯 Determining redirect URL...');
-    console.log('Current formData:', formData);
-    
-    if (!formData) {
-      console.log('❌ formData is null');
+  // Function to determine redirect URL
+  const getRedirectUrl = useCallback(
+    (formResponses: any) => {
+      console.log("🎯 Determining redirect URL...");
+      console.log("Current formData:", formData);
+
+      if (!formData) {
+        console.log("❌ formData is null");
+        return null;
+      }
+
+      // 1. First check conditional group links (highest priority)
+      const conditionalLink = getConditionalGroupLink(formResponses, formData);
+      if (conditionalLink && conditionalLink.url) {
+        console.log("🎯 Using conditional group link:", conditionalLink);
+        return conditionalLink.url;
+      }
+
+      // 2. Check user opt-ins and default links
+      const { whatsappOptin, arrataiOptin } = getUserPlatformOptin(
+        formResponses,
+        formData
+      );
+      const settings = formData.settings;
+
+      console.log("Platform settings:", {
+        whatsappOptin,
+        arrataiOptin,
+        whatsappLink: settings?.whatsappGroupLink,
+        arrataiLink: settings?.arrataiGroupLink,
+      });
+
+      if (whatsappOptin && settings?.whatsappGroupLink) {
+        console.log("📱 Redirecting to default WhatsApp group");
+        return settings.whatsappGroupLink;
+      }
+
+      if (arrataiOptin && settings?.arrataiGroupLink) {
+        console.log("👥 Redirecting to default Arratai group");
+        return settings.arrataiGroupLink;
+      }
+
+      console.log("❌ No redirect URL found");
       return null;
+    },
+    [formData, getConditionalGroupLink, getUserPlatformOptin]
+  );
+
+  // Function to extract customer details from form responses
+  const getCustomerDetails = useCallback((formResponses: any) => {
+    console.log("🔍 Extracting customer details from form responses:", formResponses);
+    
+    // Common name field variations
+    const nameFields = ['name', 'fullname', 'fullName', 'firstName', 'first_name', 'customerName'];
+    const emailFields = ['email', 'emailAddress', 'email_address'];
+    const phoneFields = ['phone', 'mobile', 'phoneNumber', 'phone_number', 'mobileNumber', 'contact'];
+    
+    let customerName = "Customer";
+    let customerEmail = "";
+    let customerContact = "";
+
+    // Find name from form responses
+    for (const field of nameFields) {
+      if (formResponses[field] && formResponses[field].trim()) {
+        customerName = formResponses[field].trim();
+        console.log(`✅ Found customer name from field '${field}': ${customerName}`);
+        break;
+      }
     }
 
-    // 1. First check conditional group links (highest priority)
-    const conditionalLink = getConditionalGroupLink(formResponses, formData);
-    if (conditionalLink && conditionalLink.url) {
-      console.log('🎯 Using conditional group link:', conditionalLink);
-      return conditionalLink.url;
+    // Find email from form responses
+    for (const field of emailFields) {
+      if (formResponses[field] && formResponses[field].trim()) {
+        customerEmail = formResponses[field].trim();
+        console.log(`✅ Found customer email from field '${field}': ${customerEmail}`);
+        break;
+      }
     }
 
-    // 2. Check user opt-ins and default links
-    const { whatsappOptin, arrataiOptin } = getUserPlatformOptin(formResponses, formData);
-    const settings = formData.settings;
+    // Find phone from form responses
+    for (const field of phoneFields) {
+      if (formResponses[field] && formResponses[field].trim()) {
+        customerContact = formResponses[field].trim();
+        console.log(`✅ Found customer contact from field '${field}': ${customerContact}`);
+        break;
+      }
+    }
 
-    console.log('Platform settings:', {
-      whatsappOptin,
-      arrataiOptin,
-      whatsappLink: settings?.whatsappGroupLink,
-      arrataiLink: settings?.arrataiGroupLink
+    // If no specific name fields found, try to find any field that might contain a name
+    if (customerName === "Customer") {
+      for (const [field, value] of Object.entries(formResponses)) {
+        if (typeof value === 'string' && value.trim() && 
+            (field.toLowerCase().includes('name') || 
+             field.toLowerCase().includes('first') || 
+             field.toLowerCase().includes('last'))) {
+          customerName = value.trim();
+          console.log(`✅ Found customer name from generic field '${field}': ${customerName}`);
+          break;
+        }
+      }
+    }
+
+    console.log("🎯 Final customer details:", {
+      name: customerName,
+      email: customerEmail,
+      contact: customerContact
     });
 
-    if (whatsappOptin && settings?.whatsappGroupLink) {
-      console.log('📱 Redirecting to default WhatsApp group');
-      return settings.whatsappGroupLink;
-    }
-
-    if (arrataiOptin && settings?.arrataiGroupLink) {
-      console.log('👥 Redirecting to default Arratai group');
-      return settings.arrataiGroupLink;
-    }
-
-    console.log('❌ No redirect URL found');
-    return null;
-  }, [formData, getConditionalGroupLink, getUserPlatformOptin]);
+    return {
+      name: customerName,
+      email: customerEmail,
+      contact: customerContact
+    };
+  }, []);
 
   // Update document head with form title and favicon
   useEffect(() => {
     if (formData) {
-      const pageTitle = formData.settings?.pageTitle || formData.title || 'Form';
+      const pageTitle =
+        formData.settings?.pageTitle || formData.title || "Form";
       document.title = pageTitle;
 
       if (formData.images?.favicon) {
-        let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+        let link = document.querySelector(
+          "link[rel*='icon']"
+        ) as HTMLLinkElement;
         if (!link) {
-          link = document.createElement('link');
-          link.rel = 'icon';
+          link = document.createElement("link");
+          link.rel = "icon";
           document.head.appendChild(link);
         }
         link.href = formData.images.favicon;
@@ -172,22 +293,35 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }
   }, [formData]);
 
-  // Fetch form data
+  // Fetch form data with payment settings
   useEffect(() => {
     const fetchForm = async () => {
       try {
         setLoading(true);
         const response = await fetch(`/api/forms/${slug}/details`);
-        if (!response.ok) throw new Error('Form not found');
+        if (!response.ok) throw new Error("Form not found");
         const data = await response.json();
-        console.log('Fetched form data:', data);
-        console.log('Conditional links in form data:', data.settings?.conditionalGroupLinks);
-        console.log('Enable conditional links:', data.settings?.enableConditionalLinks);
+        console.log("Fetched form data with PAYMENT:", data);
+        console.log("Payment settings:", {
+          acceptPayments: data.settings?.acceptPayments,
+          paymentAmount: data.settings?.paymentAmount,
+          paymentCurrency: data.settings?.paymentCurrency,
+        });
+        console.log(
+          "Conditional links in form data:",
+          data.settings?.conditionalGroupLinks
+        );
+        console.log(
+          "Enable conditional links:",
+          data.settings?.enableConditionalLinks
+        );
         setFormData(data);
-        
+
         setDefaultValues(data);
-        
-        const initialSections = new Set(data.sections?.map((section: FormSectionType) => section.id) || []);
+
+        const initialSections = new Set(
+          data.sections?.map((section: FormSectionType) => section.id) || []
+        );
         const initialFields = new Set();
         data.sections?.forEach((section: FormSectionType) => {
           section.fields?.forEach((field: any) => {
@@ -202,8 +336,8 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         setVisibleSections(initialSections);
         setVisibleFields(initialFields);
       } catch (error) {
-        console.error('Error fetching form:', error);
-        setSubmitStatus('error');
+        console.error("Error fetching form:", error);
+        setSubmitStatus("error");
       } finally {
         setLoading(false);
       }
@@ -212,45 +346,52 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     fetchForm();
   }, [slug, setDefaultValues]);
 
+  // CONDITIONAL LOGIC - COMPLETELY INTACT
   const evaluateConditionalLogic = useCallback(() => {
     if (!formData || !formData.sections) return;
 
     const evaluateCondition = (rule: any, currentValues: any) => {
-      console.log('Evaluating rule:', rule);
-      
+      console.log("Evaluating rule:", rule);
+
       let targetFieldId = rule.targetField;
-      
+
       if (!targetFieldId) {
         formData.sections?.forEach((section: FormSectionType) => {
           section.fields?.forEach((field: any) => {
             if (field.options && field.options.includes(rule.value)) {
               targetFieldId = field.id;
-              console.log(`Inferred target field: ${targetFieldId} for value: ${rule.value}`);
+              console.log(
+                `Inferred target field: ${targetFieldId} for value: ${rule.value}`
+              );
             }
           });
         });
       }
-      
+
       if (!targetFieldId) {
-        console.log('Could not determine target field for rule:', rule);
+        console.log("Could not determine target field for rule:", rule);
         return false;
       }
-      
+
       const targetValue = currentValues[targetFieldId];
-      
-      console.log(`Evaluating condition: ${targetFieldId} = ${targetValue}, operator: ${rule.operator}, value: ${rule.value}`);
-      
+
+      console.log(
+        `Evaluating condition: ${targetFieldId} = ${targetValue}, operator: ${rule.operator}, value: ${rule.value}`
+      );
+
       if (targetValue === undefined || targetValue === null) {
-        console.log(`Target value is undefined/null for field ${targetFieldId}`);
+        console.log(
+          `Target value is undefined/null for field ${targetFieldId}`
+        );
         return false;
       }
 
       if (Array.isArray(targetValue)) {
-        const checkboxValue = targetValue.find(val => val === rule.value);
+        const checkboxValue = targetValue.find((val) => val === rule.value);
         switch (rule.operator) {
-          case 'equals':
+          case "equals":
             return checkboxValue !== undefined;
-          case 'not_equals':
+          case "not_equals":
             return checkboxValue === undefined;
           default:
             return false;
@@ -258,17 +399,19 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
       }
 
       switch (rule.operator) {
-        case 'equals':
+        case "equals":
           const equalsResult = String(targetValue) === String(rule.value);
-          console.log(`Equals check: ${targetValue} === ${rule.value} = ${equalsResult}`);
+          console.log(
+            `Equals check: ${targetValue} === ${rule.value} = ${equalsResult}`
+          );
           return equalsResult;
-        case 'not_equals':
+        case "not_equals":
           return String(targetValue) !== String(rule.value);
-        case 'contains':
+        case "contains":
           return String(targetValue).includes(String(rule.value));
-        case 'greater_than':
+        case "greater_than":
           return Number(targetValue) > Number(rule.value);
-        case 'less_than':
+        case "less_than":
           return Number(targetValue) < Number(rule.value);
         default:
           console.log(`Unknown operator: ${rule.operator}`);
@@ -277,19 +420,24 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     };
 
     const currentValues = getValues();
-    console.log('=== CURRENT FORM VALUES ===', currentValues);
-    
+    console.log("=== CURRENT FORM VALUES ===", currentValues);
+
     const newVisibleSections = new Set();
     const newVisibleFields = new Set();
 
     const evaluateFieldVisibility = (field: any, currentValues: any) => {
       let shouldShowField = true;
-      
+
       if (field.conditionalRules && field.conditionalRules.length > 0) {
-        shouldShowField = field.conditionalRules.every(rule => 
+        shouldShowField = field.conditionalRules.every((rule) =>
           evaluateCondition(rule, currentValues)
         );
-        console.log(`Field ${field.id} should show:`, shouldShowField, 'rules:', field.conditionalRules);
+        console.log(
+          `Field ${field.id} should show:`,
+          shouldShowField,
+          "rules:",
+          field.conditionalRules
+        );
       }
 
       return shouldShowField;
@@ -300,7 +448,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         if (evaluateFieldVisibility(field, currentValues)) {
           newVisibleFields.add(field.id);
           console.log(`✅ Adding field to visible: ${field.id}`);
-          
+
           if (field.nestedFields && field.nestedFields.length > 0) {
             processFieldsRecursively(field.nestedFields, currentValues);
           }
@@ -312,7 +460,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
     const sectionsWithIndices = formData.sections.map((section, index) => ({
       ...section,
-      originalIndex: index
+      originalIndex: index,
     }));
 
     const sortedSections = [...sectionsWithIndices].sort((a, b) => {
@@ -322,42 +470,54 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
       return a.originalIndex - b.originalIndex;
     });
 
-    console.log('Sorted sections:', sortedSections.map(s => ({ 
-      title: s.title, 
-      order: s.order, 
-      originalIndex: s.originalIndex 
-    })));
+    console.log(
+      "Sorted sections:",
+      sortedSections.map((s) => ({
+        title: s.title,
+        order: s.order,
+        originalIndex: s.originalIndex,
+      }))
+    );
 
-    sortedSections.forEach((section: FormSectionType & { originalIndex: number }) => {
-      let shouldShowSection = true;
-      
-      if (section.conditionalRules && section.conditionalRules.length > 0) {
-        console.log(`=== EVALUATING SECTION: ${section.title} ===`);
-        console.log('Section conditional rules:', section.conditionalRules);
-        
-        shouldShowSection = section.conditionalRules.every(rule => {
-          const conditionMet = evaluateCondition(rule, currentValues);
-          console.log(`Section ${section.title} condition result: ${conditionMet}`);
-          return conditionMet;
-        });
-        
-        console.log(`Section ${section.title} final visibility: ${shouldShowSection}`);
-      }
+    sortedSections.forEach(
+      (section: FormSectionType & { originalIndex: number }) => {
+        let shouldShowSection = true;
 
-      if (shouldShowSection) {
-        newVisibleSections.add(section.id);
-        console.log(`✅ Showing section: ${section.title}`);
-        
-        if (section.fields && section.fields.length > 0) {
-          processFieldsRecursively(section.fields, currentValues);
+        if (section.conditionalRules && section.conditionalRules.length > 0) {
+          console.log(`=== EVALUATING SECTION: ${section.title} ===`);
+          console.log("Section conditional rules:", section.conditionalRules);
+
+          shouldShowSection = section.conditionalRules.every((rule) => {
+            const conditionMet = evaluateCondition(rule, currentValues);
+            console.log(
+              `Section ${section.title} condition result: ${conditionMet}`
+            );
+            return conditionMet;
+          });
+
+          console.log(
+            `Section ${section.title} final visibility: ${shouldShowSection}`
+          );
         }
-      } else {
-        console.log(`❌ Hiding section: ${section.title}`);
-      }
-    });
 
-    console.log('=== FINAL VISIBLE SECTIONS ===', Array.from(newVisibleSections));
-    console.log('=== FINAL VISIBLE FIELDS ===', Array.from(newVisibleFields));
+        if (shouldShowSection) {
+          newVisibleSections.add(section.id);
+          console.log(`✅ Showing section: ${section.title}`);
+
+          if (section.fields && section.fields.length > 0) {
+            processFieldsRecursively(section.fields, currentValues);
+          }
+        } else {
+          console.log(`❌ Hiding section: ${section.title}`);
+        }
+      }
+    );
+
+    console.log(
+      "=== FINAL VISIBLE SECTIONS ===",
+      Array.from(newVisibleSections)
+    );
+    console.log("=== FINAL VISIBLE FIELDS ===", Array.from(newVisibleFields));
 
     setVisibleSections(newVisibleSections);
     setVisibleFields(newVisibleFields);
@@ -387,12 +547,12 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
 
   // Handle redirect after success screen is shown
   useEffect(() => {
-    if (submitStatus === 'success' && redirectUrl) {
-      console.log('🔄 Success screen shown, preparing to redirect...');
-      
+    if (submitStatus === "success" && redirectUrl) {
+      console.log("🔄 Success screen shown, preparing to redirect...");
+
       // Redirect after a short delay to show success message
       const redirectTimer = setTimeout(() => {
-        console.log('🚀 REDIRECTING TO:', redirectUrl);
+        console.log("🚀 REDIRECTING TO:", redirectUrl);
         window.location.href = redirectUrl;
       }, 2000); // 2 seconds delay to show success message
 
@@ -400,124 +560,357 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }
   }, [submitStatus, redirectUrl]);
 
-  const onSubmit = async (data: any) => {
+  // Function to initiate payment - UPDATED FOR UPI ONLY
+// Function to initiate payment - UPDATED FOR UPI ONLY
+const onSubmit = async (data: any) => {
+  try {
+    setSubmitting(true);
+    
+    console.log('=== FORM SUBMISSION DEBUG ===');
+    console.log('📋 Form slug from props:', slug);
+    console.log('📦 Form data state:', formData);
+    console.log('🔗 Form customLink:', formData?.customLink);
+
+    const responses = Object.entries(data)
+      .filter(([key]) => key !== 'responses')
+      .map(([fieldId, value]) => ({
+        fieldId,
+        value: value === undefined ? '' : value
+      }));
+
+    console.log('📤 Submitting responses:', responses);
+
+    const submissionData = {
+      responses,
+      submittedAt: new Date().toISOString()
+    };
+
+    // ✅ CORRECTED: Use the same endpoint as your API route
+    console.log('🎯 Making API call to:', `/api/forms/${slug}`);
+    
+    const response = await fetch(`/api/forms/${slug}`, { // Remove "/submit"
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    });
+
+    console.log('📥 Response status:', response.status);
+    console.log('📥 Response ok:', response.ok);
+
+    // Get the raw response text first
+    const responseText = await response.text();
+    console.log('📥 Raw response text:', responseText);
+
+    let result;
     try {
-      setSubmitting(true);
-      
-      // 🎯 COMPREHENSIVE DEBUG: Find the actual field IDs and values
-      console.log('=== COMPLETE FORM DEBUG ===');
-      console.log('All form values:', JSON.stringify(data, null, 2));
-      
-      // Show ALL field IDs and their values
-      console.log('=== ALL FIELD IDs AND VALUES ===');
-      Object.keys(data).forEach(fieldId => {
-        console.log(`Field ID: ${fieldId}, Value: "${data[fieldId]}"`);
-      });
+      result = JSON.parse(responseText);
+      console.log('✅ Parsed response:', result);
+    } catch (parseError) {
+      console.error('❌ JSON parse error:', parseError);
+      throw new Error('Invalid response from server');
+    }
 
-      // 🎯 Find which field actually contains "Male"
-      console.log('=== FINDING GENDER FIELD ===');
-      let actualGenderFieldId = null;
-      Object.keys(data).forEach(fieldId => {
-        if (data[fieldId] === 'Male') {
-          actualGenderFieldId = fieldId;
-          console.log(`🎯 FOUND GENDER FIELD: ${fieldId} = "Male"`);
-        }
-      });
+    if (!response.ok) {
+      console.error('❌ Form submission failed:', result);
+      throw new Error(result.error || `Submission failed with status: ${response.status}`);
+    }
 
-      if (!actualGenderFieldId) {
-        console.log('❌ No field found with value "Male"');
+    console.log('✅ Form submission result:', result);
+
+    // Check if we got a submission ID - note the API returns "responseId"
+    const submissionId = result.responseId; // Your API returns "responseId"
+    if (!submissionId) {
+      console.error('❌ No submission ID in response:', result);
+      throw new Error('Submission failed - no submission ID received');
+    }
+
+    console.log('🎯 Using submission ID:', submissionId);
+
+    // Check if form requires payment
+    const requiresPayment = formData?.settings?.acceptPayments &&
+                           formData?.settings?.paymentAmount &&
+                           formData.settings.paymentAmount > 0;
+
+    if (requiresPayment) {
+      console.log('💰 Payment required, initiating UPI payment flow...');
+      await initiateUPIPayment(submissionId, data);
+    } else {
+      console.log('📄 No payment required, proceeding with success flow');
+      
+      // Handle conditional group links based on API response
+      if (result.groupLinks && result.groupLinks.showGroupLinks) {
+        console.log('🔗 Showing group links:', result.groupLinks);
+        // You can set state to show group links to user
+        setGroupLinks(result.groupLinks);
       }
 
-      // 🎯 Check form structure to understand field mappings
-      console.log('=== FORM STRUCTURE ANALYSIS ===');
-      if (formData?.sections) {
-        formData.sections.forEach((section: FormSectionType) => {
-          console.log(`📂 Section: "${section.title}"`);
-          section.fields?.forEach((field: any) => {
-            const fieldValue = data[field.id];
-            console.log(`   📝 Field: "${field.label}"`);
-            console.log(`        ID: ${field.id}`);
-            console.log(`        Type: ${field.type}`);
-            console.log(`        Current Value: "${fieldValue}"`);
-            console.log(`        Options: ${field.options ? field.options.join(', ') : 'N/A'}`);
-            
-            // Check if this is the gender field
-            if (fieldValue === 'Male') {
-              console.log(`   🎯 THIS IS THE GENDER FIELD!`);
-            }
-          });
-        });
+      // Handle opt-ins
+      if (result.optIns) {
+        console.log('📱 Opt-ins:', result.optIns);
+        // You can handle opt-in specific logic here
       }
 
-      // 🎯 DEBUG: Check conditional links with ACTUAL field IDs
-      console.log('=== CONDITIONAL LINKS DEBUG ===');
-      console.log('Conditional Links:', formData?.settings?.conditionalGroupLinks);
-      console.log('Enable Conditional Links:', formData?.settings?.enableConditionalLinks);
-      
-      if (formData?.settings?.conditionalGroupLinks) {
-        formData.settings.conditionalGroupLinks.forEach((link: ConditionalGroupLink) => {
-          const actualValue = data[link.fieldId];
-          console.log(`🔗 Conditional Link Check:`);
-          console.log(`   Field ID in link: ${link.fieldId}`);
-          console.log(`   Expected value: "${link.fieldValue}"`);
-          console.log(`   Actual value: "${actualValue}"`);
-          console.log(`   Match: ${actualValue === link.fieldValue}`);
-          console.log(`   Link: ${link.groupLink}`);
-        });
-      }
-
-      const responses = Object.entries(data)
-        .filter(([key]) => key !== 'responses')
-        .map(([fieldId, value]) => ({
-          fieldId,
-          value: value === undefined ? '' : value
-        }));
-
-      console.log('Submitting responses:', responses);
-
-      const submissionData = {
-        responses,
-        submittedAt: new Date().toISOString()
-      };
-
-      const response = await fetch(`/api/forms/${slug}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Submission failed');
-      }
-
-      const result = await response.json();
-      console.log('Submission result:', result);
-      
-      // 🎯 Get redirect URL based on conditional rules and form responses
-      console.log('🔍 Checking for redirect URL...');
       const calculatedRedirectUrl = getRedirectUrl(data);
       console.log('Final Redirect URL:', calculatedRedirectUrl);
-      
+
       if (calculatedRedirectUrl) {
-        console.log('🎯 Redirect URL found, setting success state first...');
-        // Set the redirect URL and show success screen first
         setRedirectUrl(calculatedRedirectUrl);
         setSubmitStatus('success');
-        // The useEffect will handle the redirect after showing success screen
       } else {
-        // If no redirect, show success screen only
-        console.log('📄 No redirect URL found, showing success screen only');
         setSubmitStatus('success');
       }
+    }
+  } catch (error) {
+    console.error('❌ Error submitting form:', error);
+    setSubmitStatus('error');
+  } finally {
+    setSubmitting(false);
+  }
+};
+  // Function to initiate UPI-only payment - FIXED SYNTAX
+  const initiateUPIPayment = async (
+    submissionId: string,
+    formResponses: any
+  ) => {
+    try {
+      console.log("💰 Initiating payment for submission:", submissionId);
+
+      // Extract customer details from form responses
+      const customerDetails = getCustomerDetails(formResponses);
       
+      console.log("🎯 Using customer details for payment:", customerDetails);
+
+      const response = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formId: formData?._id,
+          submissionId: submissionId,
+          amount: formData?.settings?.paymentAmount || 0,
+          currency: "INR",
+          customerDetails: {
+            name: customerDetails.name,
+            email: customerDetails.email,
+            contact: customerDetails.contact,
+          },
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        console.error("❌ Payment order creation failed:", responseData);
+        throw new Error(responseData.error || "Failed to create payment order");
+      }
+
+      const orderData = responseData;
+      console.log("📦 Payment order created:", orderData);
+
+      // Load Razorpay script if not already loaded
+      if (!window.Razorpay) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        document.body.appendChild(script);
+      }
+
+      // Wait for Razorpay to load
+      await new Promise((resolve, reject) => {
+        const checkRazorpay = () => {
+          if (window.Razorpay) {
+            resolve(true);
+          } else {
+            setTimeout(checkRazorpay, 100);
+          }
+        };
+
+        setTimeout(() => {
+          reject(new Error("Razorpay script loading timeout"));
+        }, 10000);
+
+        checkRazorpay();
+      });
+
+      // ✅ SIMPLE CONFIG - NO RESTRICTIONS, USE ALL AVAILABLE METHODS
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: formData?.settings?.pageTitle || formData?.title || "Form Payment",
+        description: `Payment for ${formData?.title}`,
+        order_id: orderData.id,
+
+        // ✅ PREFILL CUSTOMER DETAILS FROM FORM RESPONSES
+        prefill: {
+          name: customerDetails.name,
+          email: customerDetails.email,
+          contact: customerDetails.contact,
+        },
+
+        theme: {
+          color: formData?.theme?.primaryColor || "#7C3AED",
+        },
+
+        // ✅ PAYMENT SUCCESS HANDLER
+        handler: async function (response: any) {
+          console.log("✅ Payment successful:", response);
+
+          // Verify payment on server
+          const verifyResponse = await fetch("/api/payments/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              submissionId: submissionId,
+            }),
+          });
+
+          const verificationResult = await verifyResponse.json();
+
+          if (verificationResult.success) {
+            console.log("✅ Payment verified successfully");
+            handlePaymentSuccess(submissionId, formResponses, response, customerDetails);
+          } else {
+            console.error("❌ Payment verification failed");
+            handlePaymentFailure(
+              submissionId,
+              formResponses,
+              "Verification failed",
+              customerDetails
+            );
+          }
+        },
+
+        // ✅ MODAL CONFIG
+        modal: {
+          ondismiss: function () {
+            console.log("❌ Payment modal closed by user");
+            handlePaymentFailure(
+              submissionId,
+              formResponses,
+              "Payment cancelled by user",
+              customerDetails
+            );
+          },
+          escape: true,
+          handleback: true,
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      
+      // ✅ PAYMENT FAILED HANDLER
+      razorpay.on("payment.failed", function (response: any) {
+        console.error("❌ Payment failed:", response.error);
+        handlePaymentFailure(
+          submissionId,
+          formResponses,
+          response.error.description || "Payment failed",
+          customerDetails
+        );
+      });
+
+      razorpay.open();
     } catch (error) {
-      console.error('Error submitting form:', error);
-      setSubmitStatus('error');
-    } finally {
-      setSubmitting(false);
+      console.error("❌ Error initiating payment:", error);
+      handlePaymentFailure(
+        submissionId,
+        formResponses,
+        error.message || "Payment initiation failed",
+        getCustomerDetails(formResponses)
+      );
+    }
+  };
+
+  // Handle payment success
+  const handlePaymentSuccess = (
+    submissionId: string,
+    formResponses: any,
+    paymentResponse: any,
+    customerDetails: any
+  ) => {
+    console.log("🎉 UPI Payment successful, proceeding with success flow");
+
+    // Update payment status in database with actual customer details
+    fetch("/api/payments/update-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        submissionId,
+        status: "success",
+        paymentId: paymentResponse.razorpay_payment_id,
+        orderId: paymentResponse.razorpay_order_id,
+        paymentMethod: "upi",
+        customerDetails: {
+          name: customerDetails.name,
+          email: customerDetails.email,
+          contact: customerDetails.contact,
+        }
+      }),
+    });
+
+    // Get redirect URL and proceed
+    const calculatedRedirectUrl = getRedirectUrl(formResponses);
+    console.log("Final Redirect URL after UPI payment:", calculatedRedirectUrl);
+
+    if (calculatedRedirectUrl) {
+      setRedirectUrl(calculatedRedirectUrl);
+      setSubmitStatus("success");
+    } else {
+      setSubmitStatus("success");
+    }
+  };
+
+  // Handle payment failure
+  const handlePaymentFailure = (
+    submissionId: string,
+    formResponses: any,
+    error: string,
+    customerDetails: any
+  ) => {
+    console.error("💥 UPI Payment failed:", error);
+
+    // Update payment status in database with actual customer details
+    fetch("/api/payments/update-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        submissionId,
+        status: "failed",
+        error: error,
+        paymentMethod: "upi",
+        customerDetails: {
+          name: customerDetails.name,
+          email: customerDetails.email,
+          contact: customerDetails.contact,
+        }
+      }),
+    });
+
+    // Even if payment fails, proceed with WhatsApp group joining
+    const calculatedRedirectUrl = getRedirectUrl(formResponses);
+    console.log(
+      "Redirect URL after UPI payment failure:",
+      calculatedRedirectUrl
+    );
+
+    if (calculatedRedirectUrl) {
+      setRedirectUrl(calculatedRedirectUrl);
+      setSubmitStatus("success");
+    } else {
+      setSubmitStatus("success");
     }
   };
 
@@ -533,34 +926,31 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
           <h1 className="text-3xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
             Form Not Found
           </h1>
-          <p className="text-gray-600 text-lg">The form you're looking for doesn't exist or is no longer available.</p>
+          <p className="text-gray-600 text-lg">
+            The form you're looking for doesn't exist or is no longer available.
+          </p>
         </div>
       </div>
     );
   }
 
-  if (submitStatus === 'success') {
-    return (
-      <SuccessScreen 
-        formData={formData} 
-        redirectUrl={redirectUrl}
-      />
-    );
+  if (submitStatus === "success") {
+    return <SuccessScreen formData={formData} redirectUrl={redirectUrl} />;
   }
 
   // Create properly sorted sections for rendering
   const getSortedVisibleSections = () => {
     if (!formData?.sections) return [];
-    
+
     const sectionsWithIndices = formData.sections.map((section, index) => ({
       ...section,
-      originalIndex: index
+      originalIndex: index,
     }));
-    
-    const visibleSectionsWithIndices = sectionsWithIndices.filter(section => 
+
+    const visibleSectionsWithIndices = sectionsWithIndices.filter((section) =>
       visibleSections.has(section.id)
     );
-    
+
     return visibleSectionsWithIndices.sort((a, b) => {
       if (a.order !== b.order) {
         return a.order - b.order;
@@ -576,16 +966,42 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
       <div className="max-w-4xl mx-auto">
         <FormHeader formData={formData} />
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white/90 backdrop-blur-lg p-8 sm:p-10 shadow-2xl rounded-3xl border border-white/20 relative overflow-hidden">
+        {/* UPI Payment Info Banner */}
+        {formData.settings?.acceptPayments &&
+          formData.settings?.paymentAmount &&
+          formData.settings.paymentAmount > 0 && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shadow-lg">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <span className="text-blue-600 text-lg">💳</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-blue-800">
+                    UPI Payment Required
+                  </h3>
+                  <p className="text-blue-700 text-sm">
+                    This form requires a UPI payment of{" "}
+                    <strong>₹{formData.settings.paymentAmount}</strong> to be
+                    submitted. Only UPI payment methods are accepted.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white/90 backdrop-blur-lg p-8 sm:p-10 shadow-2xl rounded-3xl border border-white/20 relative overflow-hidden"
+        >
           {/* Decorative elements */}
           <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-orange-200/40 to-amber-200/40 rounded-full -translate-x-16 -translate-y-16"></div>
           <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tr from-amber-200/40 to-yellow-200/40 rounded-full translate-x-20 translate-y-20"></div>
-          
+
           <div className="relative z-10">
             {sortedVisibleSections.map((section: FormSectionType, index) => (
-              <div 
+              <div
                 key={section.id}
-                className="mb-10 last:mb-0 animate-fade-in-up" // Added proper spacing between sections
+                className="mb-10 last:mb-0 animate-fade-in-up"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <FormSection
@@ -601,12 +1017,14 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
               </div>
             ))}
 
-            {submitStatus === 'error' && (
+            {submitStatus === "error" && (
               <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200/60 text-red-700 rounded-2xl flex items-start animate-shake shadow-lg">
                 <span className="mr-3 flex-shrink-0 mt-0.5 text-xl">⚠️</span>
                 <div>
                   <p className="font-semibold">Submission Error</p>
-                  <p className="text-sm mt-1 opacity-90">Please try again or contact support if the problem persists.</p>
+                  <p className="text-sm mt-1 opacity-90">
+                    Please try again or contact support if the problem persists.
+                  </p>
                 </div>
               </div>
             )}
@@ -620,7 +1038,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
               >
                 {/* Animated background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                
+
                 <span className="relative flex items-center justify-center">
                   {submitting ? (
                     <>
@@ -630,12 +1048,15 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
                   ) : (
                     <>
                       <span className="mr-3 text-xl group-hover:scale-110 transition-transform"></span>
-                      Submit Form
+                      {formData.settings?.acceptPayments &&
+                      formData.settings?.paymentAmount
+                        ? `Pay ₹${formData.settings.paymentAmount} via UPI`
+                        : "Submit Form"}
                     </>
                   )}
                 </span>
               </button>
-              
+
               {/* Progress indicator */}
               {submitting && (
                 <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
@@ -656,45 +1077,90 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
   );
 }
 
+// GlobalStyles function
 function GlobalStyles() {
   return (
     <style jsx global>{`
-      @keyframes fadeIn { 
-        from { opacity: 0; transform: translateY(20px); } 
-        to { opacity: 1; transform: translateY(0); } 
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-      @keyframes fade-in-up { 
-        from { opacity: 0; transform: translateY(30px); } 
-        to { opacity: 1; transform: translateY(0); } 
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
-      @keyframes shake { 
-        0%, 100% { transform: translateX(0); } 
-        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 
-        20%, 40%, 60%, 80% { transform: translateX(5px); } 
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        10%,
+        30%,
+        50%,
+        70%,
+        90% {
+          transform: translateX(-5px);
+        }
+        20%,
+        40%,
+        60%,
+        80% {
+          transform: translateX(5px);
+        }
       }
-      @keyframes bounce-in { 
-        0% { transform: scale(0.5); opacity: 0; } 
-        60% { transform: scale(1.2); opacity: 1; } 
-        100% { transform: scale(1); } 
+      @keyframes bounce-in {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        60% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+        }
       }
       @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
+        0%,
+        100% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
       }
       @keyframes glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(255, 129, 0, 0.3); }
-        50% { box-shadow: 0 0 30px rgba(255, 129, 0, 0.6); }
+        0%,
+        100% {
+          box-shadow: 0 0 20px rgba(255, 129, 0, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(255, 129, 0, 0.6);
+        }
       }
-      
-      .animate-fade-in-up { 
-        animation: fade-in-up 0.6s ease-out forwards; 
+
+      .animate-fade-in-up {
+        animation: fade-in-up 0.6s ease-out forwards;
         opacity: 0;
       }
-      .animate-shake { 
-        animation: shake 0.5s ease-in-out; 
+      .animate-shake {
+        animation: shake 0.5s ease-in-out;
       }
-      .animate-bounce-in { 
-        animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; 
+      .animate-bounce-in {
+        animation: bounce-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
       }
       .animate-float {
         animation: float 3s ease-in-out infinite;
@@ -702,12 +1168,12 @@ function GlobalStyles() {
       .animate-glow {
         animation: glow 2s ease-in-out infinite;
       }
-      
+
       /* Smooth scrolling */
       html {
         scroll-behavior: smooth;
       }
-      
+
       /* Custom scrollbar with orange theme */
       ::-webkit-scrollbar {
         width: 6px;
@@ -716,13 +1182,13 @@ function GlobalStyles() {
         background: #fef3c7;
       }
       ::-webkit-scrollbar-thumb {
-        background: linear-gradient(to bottom, #FF8100, #f59e0b);
+        background: linear-gradient(to bottom, #ff8100, #f59e0b);
         border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(to bottom, #E67300, #d97706);
+        background: linear-gradient(to bottom, #e67300, #d97706);
       }
-      
+
       /* Remove number input spinners */
       input[type="number"]::-webkit-outer-spin-button,
       input[type="number"]::-webkit-inner-spin-button {
@@ -732,15 +1198,17 @@ function GlobalStyles() {
       input[type="number"] {
         -moz-appearance: textfield;
       }
-      
+
       /* Focus styles with orange theme */
-      input:focus, select:focus, textarea:focus {
+      input:focus,
+      select:focus,
+      textarea:focus {
         outline: none;
         ring: 2px;
-        ring-color: #FF8100;
+        ring-color: #ff8100;
         ring-opacity: 0.5;
       }
-      
+
       /* Smooth transitions for all interactive elements */
       * {
         transition: all 0.2s ease-in-out;
@@ -748,7 +1216,7 @@ function GlobalStyles() {
 
       /* Custom orange theme for various elements */
       .orange-gradient-text {
-        background: linear-gradient(135deg, #FF8100, #f59e0b);
+        background: linear-gradient(135deg, #ff8100, #f59e0b);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -760,7 +1228,6 @@ function GlobalStyles() {
 
       .orange-glow:hover {
         box-shadow: 0 0 30px rgba(255, 129, 0, 0.5);
-      }
     `}</style>
   );
 }

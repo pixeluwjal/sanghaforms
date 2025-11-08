@@ -24,6 +24,7 @@ const navigation = [
   { name: 'Forms', href: '/admin/forms', icon: FileText },
   { name: 'Responses', href: '/admin/responses', icon: Eye },
   { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Payments', href: '/admin/payments', icon: Users },
 ];
 
 const secondaryNavigation = [

@@ -1,4 +1,3 @@
-// app/api/forms/[slug]/details/route.ts - UPDATED
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Form from '@/models/Form';
@@ -74,7 +73,7 @@ export async function GET(
     const images = form.images || {};
     const settings = form.settings || {};
     
-    // 🆕 CRITICAL FIX: Include conditionalGroupLinks and enableConditionalLinks
+    // 🆕 CRITICAL FIX: Include ALL settings including payment fields
     const transformedForm = {
       _id: form._id,
       title: form.title,
@@ -94,7 +93,13 @@ export async function GET(
         favicon: images.favicon || ''
       },
       settings: {
-        // 🆕 ADD THESE CRITICAL FIELDS:
+        // 🆕 PAYMENT FIELDS - ADD THESE:
+        acceptPayments: settings.acceptPayments || false,
+        paymentAmount: settings.paymentAmount || 0,
+        paymentCurrency: settings.paymentCurrency || 'INR',
+        paymentDescription: settings.paymentDescription || '',
+        
+        // 🆕 CONDITIONAL LINKS:
         enableConditionalLinks: settings.enableConditionalLinks || false,
         conditionalGroupLinks: settings.conditionalGroupLinks || [],
         
@@ -112,17 +117,21 @@ export async function GET(
         maxResponses: settings.maxResponses || 1000,
         collectEmail: settings.collectEmail !== false,
         enableCustomSlug: settings.enableCustomSlug || false,
-        defaultSource: settings.defaultSource || ''
+        defaultSource: settings.defaultSource || '',
+        previousSlugs: settings.previousSlugs || []
       },
       status: form.status,
       createdAt: form.createdAt,
       updatedAt: form.updatedAt
     };
 
-    console.log('🔍 Form details fetched:', {
+    console.log('🔍 Form details fetched with PAYMENT SETTINGS:', {
       pageTitle: transformedForm.settings.pageTitle,
       favicon: transformedForm.images.favicon,
       hasFavicon: !!transformedForm.images.favicon,
+      // 🆕 LOG PAYMENT SETTINGS:
+      acceptPayments: transformedForm.settings.acceptPayments,
+      paymentAmount: transformedForm.settings.paymentAmount,
       // 🆕 LOG CONDITIONAL LINKS:
       enableConditionalLinks: transformedForm.settings.enableConditionalLinks,
       conditionalGroupLinksCount: transformedForm.settings.conditionalGroupLinks?.length,

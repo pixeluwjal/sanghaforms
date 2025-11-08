@@ -1,11 +1,10 @@
-// app/api/forms/[slug]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Form from '@/models/Form';
 import LeadResponse from '@/models/LeadResponse';
 import SwayamsevakResponse from '@/models/SwayamsevakResponse';
 
-// GET - Fetch form by slug (keep this same as before)
+// GET - Fetch form by slug
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
@@ -73,7 +72,9 @@ export async function GET(
         enableProgressSave: form.settings.enableProgressSave,
         showGroupLinks: form.settings.showGroupLinks,
         whatsappGroupLink: form.settings.whatsappGroupLink,
-        arrataiGroupLink: form.settings.arrataiGroupLink
+        arrataiGroupLink: form.settings.arrataiGroupLink,
+        enableConditionalLinks: form.settings.enableConditionalLinks,
+        conditionalGroupLinks: form.settings.conditionalGroupLinks
       }
     };
 
