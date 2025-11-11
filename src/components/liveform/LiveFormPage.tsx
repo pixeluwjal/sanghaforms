@@ -13,17 +13,6 @@ import {
   ConditionalGroupLink,
 } from "./types";
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-interface PaymentData {
-  submissionId: string;
-  formResponses: any;
-}
-
 export default function LiveFormPage({ slug }: LiveFormPageProps) {
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +25,6 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
   );
   const [visibleFields, setVisibleFields] = useState<Set<string>>(new Set());
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
 
   const {
     register,
@@ -205,73 +193,6 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     [formData, getConditionalGroupLink, getUserPlatformOptin]
   );
 
-  // Function to extract customer details from form responses
-  const getCustomerDetails = useCallback((formResponses: any) => {
-    console.log("🔍 Extracting customer details from form responses:", formResponses);
-    
-    // Common name field variations
-    const nameFields = ['name', 'fullname', 'fullName', 'firstName', 'first_name', 'customerName'];
-    const emailFields = ['email', 'emailAddress', 'email_address'];
-    const phoneFields = ['phone', 'mobile', 'phoneNumber', 'phone_number', 'mobileNumber', 'contact'];
-    
-    let customerName = "Customer";
-    let customerEmail = "";
-    let customerContact = "";
-
-    // Find name from form responses
-    for (const field of nameFields) {
-      if (formResponses[field] && formResponses[field].trim()) {
-        customerName = formResponses[field].trim();
-        console.log(`✅ Found customer name from field '${field}': ${customerName}`);
-        break;
-      }
-    }
-
-    // Find email from form responses
-    for (const field of emailFields) {
-      if (formResponses[field] && formResponses[field].trim()) {
-        customerEmail = formResponses[field].trim();
-        console.log(`✅ Found customer email from field '${field}': ${customerEmail}`);
-        break;
-      }
-    }
-
-    // Find phone from form responses
-    for (const field of phoneFields) {
-      if (formResponses[field] && formResponses[field].trim()) {
-        customerContact = formResponses[field].trim();
-        console.log(`✅ Found customer contact from field '${field}': ${customerContact}`);
-        break;
-      }
-    }
-
-    // If no specific name fields found, try to find any field that might contain a name
-    if (customerName === "Customer") {
-      for (const [field, value] of Object.entries(formResponses)) {
-        if (typeof value === 'string' && value.trim() && 
-            (field.toLowerCase().includes('name') || 
-             field.toLowerCase().includes('first') || 
-             field.toLowerCase().includes('last'))) {
-          customerName = value.trim();
-          console.log(`✅ Found customer name from generic field '${field}': ${customerName}`);
-          break;
-        }
-      }
-    }
-
-    console.log("🎯 Final customer details:", {
-      name: customerName,
-      email: customerEmail,
-      contact: customerContact
-    });
-
-    return {
-      name: customerName,
-      email: customerEmail,
-      contact: customerContact
-    };
-  }, []);
-
   // Update document head with form title and favicon
   useEffect(() => {
     if (formData) {
@@ -293,7 +214,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }
   }, [formData]);
 
-  // Fetch form data with payment settings
+  // Fetch form data
   useEffect(() => {
     const fetchForm = async () => {
       try {
@@ -301,12 +222,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
         const response = await fetch(`/api/forms/${slug}/details`);
         if (!response.ok) throw new Error("Form not found");
         const data = await response.json();
-        console.log("Fetched form data with PAYMENT:", data);
-        console.log("Payment settings:", {
-          acceptPayments: data.settings?.acceptPayments,
-          paymentAmount: data.settings?.paymentAmount,
-          paymentCurrency: data.settings?.paymentCurrency,
-        });
+        console.log("Fetched form data:", data);
         console.log(
           "Conditional links in form data:",
           data.settings?.conditionalGroupLinks
@@ -346,7 +262,7 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     fetchForm();
   }, [slug, setDefaultValues]);
 
-  // CONDITIONAL LOGIC - COMPLETELY INTACT
+  // CONDITIONAL LOGIC
   const evaluateConditionalLogic = useCallback(() => {
     if (!formData || !formData.sections) return;
 
@@ -560,90 +476,76 @@ export default function LiveFormPage({ slug }: LiveFormPageProps) {
     }
   }, [submitStatus, redirectUrl]);
 
-  // Function to initiate payment - UPDATED FOR UPI ONLY
-// Function to initiate payment - UPDATED FOR UPI ONLY
-const onSubmit = async (data: any) => {
-  try {
-    setSubmitting(true);
-    
-    console.log('=== FORM SUBMISSION DEBUG ===');
-    console.log('📋 Form slug from props:', slug);
-    console.log('📦 Form data state:', formData);
-    console.log('🔗 Form customLink:', formData?.customLink);
-
-    const responses = Object.entries(data)
-      .filter(([key]) => key !== 'responses')
-      .map(([fieldId, value]) => ({
-        fieldId,
-        value: value === undefined ? '' : value
-      }));
-
-    console.log('📤 Submitting responses:', responses);
-
-    const submissionData = {
-      responses,
-      submittedAt: new Date().toISOString()
-    };
-
-    // ✅ CORRECTED: Use the same endpoint as your API route
-    console.log('🎯 Making API call to:', `/api/forms/${slug}`);
-    
-    const response = await fetch(`/api/forms/${slug}`, { // Remove "/submit"
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(submissionData),
-    });
-
-    console.log('📥 Response status:', response.status);
-    console.log('📥 Response ok:', response.ok);
-
-    // Get the raw response text first
-    const responseText = await response.text();
-    console.log('📥 Raw response text:', responseText);
-
-    let result;
+  // Form submission handler
+  const onSubmit = async (data: any) => {
     try {
-      result = JSON.parse(responseText);
-      console.log('✅ Parsed response:', result);
-    } catch (parseError) {
-      console.error('❌ JSON parse error:', parseError);
-      throw new Error('Invalid response from server');
-    }
-
-    if (!response.ok) {
-      console.error('❌ Form submission failed:', result);
-      throw new Error(result.error || `Submission failed with status: ${response.status}`);
-    }
-
-    console.log('✅ Form submission result:', result);
-
-    // Check if we got a submission ID - note the API returns "responseId"
-    const submissionId = result.responseId; // Your API returns "responseId"
-    if (!submissionId) {
-      console.error('❌ No submission ID in response:', result);
-      throw new Error('Submission failed - no submission ID received');
-    }
-
-    console.log('🎯 Using submission ID:', submissionId);
-
-    // Check if form requires payment
-    const requiresPayment = formData?.settings?.acceptPayments &&
-                           formData?.settings?.paymentAmount &&
-                           formData.settings.paymentAmount > 0;
-
-    if (requiresPayment) {
-      console.log('💰 Payment required, initiating UPI payment flow...');
-      await initiateUPIPayment(submissionId, data);
-    } else {
-      console.log('📄 No payment required, proceeding with success flow');
+      setSubmitting(true);
       
+      console.log('=== FORM SUBMISSION DEBUG ===');
+      console.log('📋 Form slug from props:', slug);
+      console.log('📦 Form data state:', formData);
+      console.log('🔗 Form customLink:', formData?.customLink);
+
+      const responses = Object.entries(data)
+        .filter(([key]) => key !== 'responses')
+        .map(([fieldId, value]) => ({
+          fieldId,
+          value: value === undefined ? '' : value
+        }));
+
+      console.log('📤 Submitting responses:', responses);
+
+      const submissionData = {
+        responses,
+        submittedAt: new Date().toISOString()
+      };
+
+      console.log('🎯 Making API call to:', `/api/forms/${slug}`);
+      
+      const response = await fetch(`/api/forms/${slug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response ok:', response.ok);
+
+      // Get the raw response text first
+      const responseText = await response.text();
+      console.log('📥 Raw response text:', responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('✅ Parsed response:', result);
+      } catch (parseError) {
+        console.error('❌ JSON parse error:', parseError);
+        throw new Error('Invalid response from server');
+      }
+
+      if (!response.ok) {
+        console.error('❌ Form submission failed:', result);
+        throw new Error(result.error || `Submission failed with status: ${response.status}`);
+      }
+
+      console.log('✅ Form submission result:', result);
+
+      // Check if we got a submission ID
+      const submissionId = result.responseId;
+      if (!submissionId) {
+        console.error('❌ No submission ID in response:', result);
+        throw new Error('Submission failed - no submission ID received');
+      }
+
+      console.log('🎯 Using submission ID:', submissionId);
+
       // Handle conditional group links based on API response
       if (result.groupLinks && result.groupLinks.showGroupLinks) {
         console.log('🔗 Showing group links:', result.groupLinks);
         // You can set state to show group links to user
-        setGroupLinks(result.groupLinks);
       }
 
       // Handle opt-ins
@@ -661,256 +563,11 @@ const onSubmit = async (data: any) => {
       } else {
         setSubmitStatus('success');
       }
-    }
-  } catch (error) {
-    console.error('❌ Error submitting form:', error);
-    setSubmitStatus('error');
-  } finally {
-    setSubmitting(false);
-  }
-};
-  // Function to initiate UPI-only payment - FIXED SYNTAX
-  const initiateUPIPayment = async (
-    submissionId: string,
-    formResponses: any
-  ) => {
-    try {
-      console.log("💰 Initiating payment for submission:", submissionId);
-
-      // Extract customer details from form responses
-      const customerDetails = getCustomerDetails(formResponses);
-      
-      console.log("🎯 Using customer details for payment:", customerDetails);
-
-      const response = await fetch("/api/payments/create-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          formId: formData?._id,
-          submissionId: submissionId,
-          amount: formData?.settings?.paymentAmount || 0,
-          currency: "INR",
-          customerDetails: {
-            name: customerDetails.name,
-            email: customerDetails.email,
-            contact: customerDetails.contact,
-          },
-        }),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        console.error("❌ Payment order creation failed:", responseData);
-        throw new Error(responseData.error || "Failed to create payment order");
-      }
-
-      const orderData = responseData;
-      console.log("📦 Payment order created:", orderData);
-
-      // Load Razorpay script if not already loaded
-      if (!window.Razorpay) {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        script.async = true;
-        document.body.appendChild(script);
-      }
-
-      // Wait for Razorpay to load
-      await new Promise((resolve, reject) => {
-        const checkRazorpay = () => {
-          if (window.Razorpay) {
-            resolve(true);
-          } else {
-            setTimeout(checkRazorpay, 100);
-          }
-        };
-
-        setTimeout(() => {
-          reject(new Error("Razorpay script loading timeout"));
-        }, 10000);
-
-        checkRazorpay();
-      });
-
-      // ✅ SIMPLE CONFIG - NO RESTRICTIONS, USE ALL AVAILABLE METHODS
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: formData?.settings?.pageTitle || formData?.title || "Form Payment",
-        description: `Payment for ${formData?.title}`,
-        order_id: orderData.id,
-
-        // ✅ PREFILL CUSTOMER DETAILS FROM FORM RESPONSES
-        prefill: {
-          name: customerDetails.name,
-          email: customerDetails.email,
-          contact: customerDetails.contact,
-        },
-
-        theme: {
-          color: formData?.theme?.primaryColor || "#7C3AED",
-        },
-
-        // ✅ PAYMENT SUCCESS HANDLER
-        handler: async function (response: any) {
-          console.log("✅ Payment successful:", response);
-
-          // Verify payment on server
-          const verifyResponse = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              submissionId: submissionId,
-            }),
-          });
-
-          const verificationResult = await verifyResponse.json();
-
-          if (verificationResult.success) {
-            console.log("✅ Payment verified successfully");
-            handlePaymentSuccess(submissionId, formResponses, response, customerDetails);
-          } else {
-            console.error("❌ Payment verification failed");
-            handlePaymentFailure(
-              submissionId,
-              formResponses,
-              "Verification failed",
-              customerDetails
-            );
-          }
-        },
-
-        // ✅ MODAL CONFIG
-        modal: {
-          ondismiss: function () {
-            console.log("❌ Payment modal closed by user");
-            handlePaymentFailure(
-              submissionId,
-              formResponses,
-              "Payment cancelled by user",
-              customerDetails
-            );
-          },
-          escape: true,
-          handleback: true,
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      
-      // ✅ PAYMENT FAILED HANDLER
-      razorpay.on("payment.failed", function (response: any) {
-        console.error("❌ Payment failed:", response.error);
-        handlePaymentFailure(
-          submissionId,
-          formResponses,
-          response.error.description || "Payment failed",
-          customerDetails
-        );
-      });
-
-      razorpay.open();
     } catch (error) {
-      console.error("❌ Error initiating payment:", error);
-      handlePaymentFailure(
-        submissionId,
-        formResponses,
-        error.message || "Payment initiation failed",
-        getCustomerDetails(formResponses)
-      );
-    }
-  };
-
-  // Handle payment success
-  const handlePaymentSuccess = (
-    submissionId: string,
-    formResponses: any,
-    paymentResponse: any,
-    customerDetails: any
-  ) => {
-    console.log("🎉 UPI Payment successful, proceeding with success flow");
-
-    // Update payment status in database with actual customer details
-    fetch("/api/payments/update-status", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        submissionId,
-        status: "success",
-        paymentId: paymentResponse.razorpay_payment_id,
-        orderId: paymentResponse.razorpay_order_id,
-        paymentMethod: "upi",
-        customerDetails: {
-          name: customerDetails.name,
-          email: customerDetails.email,
-          contact: customerDetails.contact,
-        }
-      }),
-    });
-
-    // Get redirect URL and proceed
-    const calculatedRedirectUrl = getRedirectUrl(formResponses);
-    console.log("Final Redirect URL after UPI payment:", calculatedRedirectUrl);
-
-    if (calculatedRedirectUrl) {
-      setRedirectUrl(calculatedRedirectUrl);
-      setSubmitStatus("success");
-    } else {
-      setSubmitStatus("success");
-    }
-  };
-
-  // Handle payment failure
-  const handlePaymentFailure = (
-    submissionId: string,
-    formResponses: any,
-    error: string,
-    customerDetails: any
-  ) => {
-    console.error("💥 UPI Payment failed:", error);
-
-    // Update payment status in database with actual customer details
-    fetch("/api/payments/update-status", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        submissionId,
-        status: "failed",
-        error: error,
-        paymentMethod: "upi",
-        customerDetails: {
-          name: customerDetails.name,
-          email: customerDetails.email,
-          contact: customerDetails.contact,
-        }
-      }),
-    });
-
-    // Even if payment fails, proceed with WhatsApp group joining
-    const calculatedRedirectUrl = getRedirectUrl(formResponses);
-    console.log(
-      "Redirect URL after UPI payment failure:",
-      calculatedRedirectUrl
-    );
-
-    if (calculatedRedirectUrl) {
-      setRedirectUrl(calculatedRedirectUrl);
-      setSubmitStatus("success");
-    } else {
-      setSubmitStatus("success");
+      console.error('❌ Error submitting form:', error);
+      setSubmitStatus('error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -965,29 +622,6 @@ const onSubmit = async (data: any) => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <FormHeader formData={formData} />
-
-        {/* UPI Payment Info Banner */}
-        {formData.settings?.acceptPayments &&
-          formData.settings?.paymentAmount &&
-          formData.settings.paymentAmount > 0 && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shadow-lg">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-blue-600 text-lg">💳</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-blue-800">
-                    UPI Payment Required
-                  </h3>
-                  <p className="text-blue-700 text-sm">
-                    This form requires a UPI payment of{" "}
-                    <strong>₹{formData.settings.paymentAmount}</strong> to be
-                    submitted. Only UPI payment methods are accepted.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -1046,13 +680,7 @@ const onSubmit = async (data: any) => {
                       <span className="animate-pulse">Processing...</span>
                     </>
                   ) : (
-                    <>
-                      <span className="mr-3 text-xl group-hover:scale-110 transition-transform"></span>
-                      {formData.settings?.acceptPayments &&
-                      formData.settings?.paymentAmount
-                        ? `Pay ₹${formData.settings.paymentAmount} via UPI`
-                        : "Submit Form"}
-                    </>
+                    "Submit Form"
                   )}
                 </span>
               </button>
@@ -1228,6 +856,7 @@ function GlobalStyles() {
 
       .orange-glow:hover {
         box-shadow: 0 0 30px rgba(255, 129, 0, 0.5);
+      }
     `}</style>
   );
 }

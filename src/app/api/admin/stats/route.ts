@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 import FormResponse from '@/models/FormResponse';
+import Admin from '@/models/Admin'; // Import Admin model
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,11 +25,11 @@ export async function GET(request: NextRequest) {
     // Get total responses from ALL forms
     const responseCount = await FormResponse.countDocuments({});
 
-    // Get recent forms from ALL forms
+    // Get recent forms from ALL forms - populate with Admin instead of User
     const recentForms = await Form.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .populate('createdBy', 'email name')
+      .populate('createdBy', 'email name') // This will now work with Admin model
       .lean();
 
     // Get responses count for each recent form
