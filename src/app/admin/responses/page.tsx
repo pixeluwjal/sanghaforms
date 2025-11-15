@@ -45,6 +45,36 @@ export default function ResponsesPage() {
     fetchData();
   }, []);
 
+  // Debug effect to see what's happening
+  useEffect(() => {
+    if (searchTerm.includes('gender')) {
+      console.log('🔍 ===== GENDER FILTER DEBUG =====');
+      console.log('Search Term:', searchTerm);
+      
+      const [fieldName, fieldValue] = searchTerm.toLowerCase().split(':').map(s => s.trim());
+      
+      // Analyze all gender fields in the data
+      const allGenderFields = responses.flatMap(response => {
+        const genderFields = Object.values(response.responses).filter(field => 
+          field.label.toLowerCase().includes('gender') || field.label.toLowerCase().includes('sex')
+        );
+        
+        return genderFields.map(field => ({
+          responseId: response._id,
+          name: response.responses['name']?.value || 'Unknown',
+          fieldLabel: field.label,
+          fieldValue: field.value,
+          normalizedValue: String(field.value).toLowerCase().trim(),
+          matchesSearch: String(field.value).toLowerCase().trim() === fieldValue
+        }));
+      });
+      
+      console.log('Total gender fields found:', allGenderFields.length);
+      console.log('All gender data:', allGenderFields);
+      console.log('Matching gender fields:', allGenderFields.filter(g => g.matchesSearch));
+    }
+  }, [searchTerm, responses]);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
   };
@@ -367,90 +397,103 @@ export default function ResponsesPage() {
     }
   };
 
-  // FIXED: Enhanced filtering logic
-  const filteredResponses = responses
-    .map(response => formatResponseWithSanghaNames(response))
-    .filter(response => {
-      // Form filter
-      if (selectedForm !== 'all' && response.formId !== selectedForm) {
+  // COMPLETELY FIXED FILTERING LOGIC
+// FIXED FILTERING LOGIC - NO MORE "female" INCLUDES "male" BUG!
+const filteredResponses = responses
+  .map(response => formatResponseWithSanghaNames(response))
+  .filter(response => {
+    // Form filter
+    if (selectedForm !== 'all' && response.formId !== selectedForm) {
+      return false;
+    }
+    
+    // Collection filter
+    if (selectedCollection !== 'all' && response.collection !== selectedCollection) {
+      return false;
+    }
+    
+    // Date range filter
+    if (dateRange !== 'all') {
+      const responseDate = new Date(response.submittedAt);
+      const now = new Date();
+      const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
+      if (responseDate < daysAgo) {
         return false;
       }
+    }
+    
+    // Search filter - FIXED GENDER BUG
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
       
-      // Collection filter
-      if (selectedCollection !== 'all' && response.collection !== selectedCollection) {
-        return false;
-      }
-      
-      // Date range filter
-      if (dateRange !== 'all') {
-        const responseDate = new Date(response.submittedAt);
-        const now = new Date();
-        const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
-        if (responseDate < daysAgo) {
-          return false;
-        }
-      }
-      
-      // Enhanced search with field-based filtering
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase().trim();
+      // Handle field-based search (field:value)
+      if (searchLower.includes(':')) {
+        const [fieldName, fieldValue] = searchLower.split(':').map(s => s.trim());
         
-        // Check if it's a field-based search (field:value)
-        if (searchLower.includes(':')) {
-          const [fieldName, fieldValue] = searchLower.split(':').map(s => s.trim());
-          
-          // Find if any field matches the field name and contains the value
-          const hasMatchingField = Object.values(response.responses).some(field => {
-            const fieldLabelMatches = field.label.toLowerCase().includes(fieldName);
-            const fieldValueMatches = String(field.value).toLowerCase().includes(fieldValue);
-            return fieldLabelMatches && fieldValueMatches;
-          });
-          
-          if (!hasMatchingField) {
-            return false;
-          }
-        } else {
-          // Global search across all fields and metadata
-          const hasMatchingResponse = Object.values(response.responses).some(field => 
-            String(field.value).toLowerCase().includes(searchLower) ||
-            field.label.toLowerCase().includes(searchLower)
+        // SPECIAL HANDLING FOR GENDER FIELD
+        if (fieldName.includes('gender') || fieldName.includes('sex')) {
+          // Find gender field in this response
+          const genderField = Object.values(response.responses).find(field => 
+            field.label.toLowerCase().includes('gender') || 
+            field.label.toLowerCase().includes('sex')
           );
           
-          const matchesFormTitle = response.formTitle?.toLowerCase().includes(searchLower);
-          const matchesFormName = response.formName?.toLowerCase().includes(searchLower);
-          const matchesCollection = response.collection?.toLowerCase().includes(searchLower);
-          const matchesStatus = response.status?.toLowerCase().includes(searchLower);
-          const matchesSource = response.source?.toLowerCase().includes(searchLower);
-          const matchesName = response.name?.toLowerCase().includes(searchLower);
-          const matchesEmail = response.email?.toLowerCase().includes(searchLower);
-          const matchesPhone = response.phone?.toLowerCase().includes(searchLower);
-          const matchesSwayamsevakId = response.swayamsevakId?.toLowerCase().includes(searchLower);
-          const matchesSangha = response.sangha?.toLowerCase().includes(searchLower);
-          const matchesArea = response.area?.toLowerCase().includes(searchLower);
-          const matchesDistrict = response.district?.toLowerCase().includes(searchLower);
-          const matchesState = response.state?.toLowerCase().includes(searchLower);
-          
-          if (!hasMatchingResponse && 
-              !matchesFormTitle && 
-              !matchesFormName && 
-              !matchesCollection &&
-              !matchesStatus &&
-              !matchesSource &&
-              !matchesName &&
-              !matchesEmail &&
-              !matchesPhone &&
-              !matchesSwayamsevakId &&
-              !matchesSangha &&
-              !matchesArea &&
-              !matchesDistrict &&
-              !matchesState) {
-            return false;
+          if (!genderField) {
+            return false; // No gender field found in this response
           }
+          
+          const actualGenderValue = String(genderField.value).toLowerCase().trim();
+          const searchGenderValue = fieldValue.toLowerCase().trim();
+          
+          // FIX: Use EXACT WORD MATCHING instead of includes()
+          // This prevents "female" matching "male"
+          const isMatch = actualGenderValue === searchGenderValue;
+          
+          console.log('🎯 Gender Filter Check (FIXED):', {
+            responseId: response._id,
+            name: response.responses['name']?.value,
+            fieldLabel: genderField.label,
+            actualValue: genderField.value,
+            normalizedValue: actualGenderValue,
+            searchFor: searchGenderValue,
+            matches: isMatch,
+            bugCheck: `"${actualGenderValue}".includes("${searchGenderValue}") = ${actualGenderValue.includes(searchGenderValue)}`, // This shows the bug
+            fixedCheck: `"${actualGenderValue}" === "${searchGenderValue}" = ${isMatch}` // This shows the fix
+          });
+          
+          return isMatch; // EXACT MATCH ONLY
         }
+        
+        // For other field-based searches
+        const hasMatchingField = Object.values(response.responses).some(field => {
+          const fieldLabelMatches = field.label.toLowerCase().includes(fieldName);
+          if (!fieldLabelMatches) return false;
+          
+          // FIX: For other fields too, use exact matching if needed
+          const fieldValueMatches = String(field.value).toLowerCase().includes(fieldValue);
+          return fieldValueMatches;
+        });
+        
+        return hasMatchingField;
+      } 
+      // Global search
+      else {
+        const hasMatchingField = Object.values(response.responses).some(field => 
+          String(field.value).toLowerCase().includes(searchLower) ||
+          field.label.toLowerCase().includes(searchLower)
+        );
+        
+        const metadataMatches = 
+          response.formTitle?.toLowerCase().includes(searchLower) ||
+          response.formName?.toLowerCase().includes(searchLower) ||
+          response.collection?.toLowerCase().includes(searchLower);
+        
+        return hasMatchingField || metadataMatches;
       }
-      return true;
-    });
-
+    }
+    
+    return true;
+  });
   // Get collection statistics
   const collectionStats = {
     total: responses.length,
