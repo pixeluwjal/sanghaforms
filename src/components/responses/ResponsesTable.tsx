@@ -1,4 +1,6 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, Fragment } from 'react';
 import { FormResponse } from './types';
 import ResponseRow from './ResponseRow';
 import ExpandedRow from './ExpandedRow';
@@ -146,9 +148,8 @@ export default function ResponsesTable({
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {responses.map((response) => (
-                  <>
+                  <Fragment key={response._id}>
                     <ResponseRow
-                      key={response._id}
                       response={response}
                       isExpanded={expandedRow === response._id}
                       isSelected={selectedResponses.has(response._id)}
@@ -160,7 +161,7 @@ export default function ResponsesTable({
                     
                     {/* Expanded Row */}
                     {expandedRow === response._id && (
-                      <tr key={`expanded-${response._id}`} className="bg-gray-50/50">
+                      <tr className="bg-gray-50/50">
                         <td colSpan={100} className="px-4 py-6">
                           <ExpandedRow
                             response={response}
@@ -168,7 +169,7 @@ export default function ResponsesTable({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

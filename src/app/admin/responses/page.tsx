@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   FormResponse, 
   Form, 
@@ -398,102 +398,106 @@ export default function ResponsesPage() {
   };
 
   // COMPLETELY FIXED FILTERING LOGIC
-// FIXED FILTERING LOGIC - NO MORE "female" INCLUDES "male" BUG!
-const filteredResponses = responses
-  .map(response => formatResponseWithSanghaNames(response))
-  .filter(response => {
-    // Form filter
-    if (selectedForm !== 'all' && response.formId !== selectedForm) {
-      return false;
-    }
-    
-    // Collection filter
-    if (selectedCollection !== 'all' && response.collection !== selectedCollection) {
-      return false;
-    }
-    
-    // Date range filter
-    if (dateRange !== 'all') {
-      const responseDate = new Date(response.submittedAt);
-      const now = new Date();
-      const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
-      if (responseDate < daysAgo) {
+  // FIXED FILTERING LOGIC - NO MORE "female" INCLUDES "male" BUG!
+  // ENHANCED FILTERING LOGIC - SUPPORTS MULTIPLE FIELD FILTERS
+  const filteredResponses = responses
+    .map(response => formatResponseWithSanghaNames(response))
+    .filter(response => {
+      // Form filter
+      if (selectedForm !== 'all' && response.formId !== selectedForm) {
         return false;
       }
-    }
-    
-    // Search filter - FIXED GENDER BUG
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase().trim();
       
-      // Handle field-based search (field:value)
-      if (searchLower.includes(':')) {
-        const [fieldName, fieldValue] = searchLower.split(':').map(s => s.trim());
-        
-        // SPECIAL HANDLING FOR GENDER FIELD
-        if (fieldName.includes('gender') || fieldName.includes('sex')) {
-          // Find gender field in this response
-          const genderField = Object.values(response.responses).find(field => 
-            field.label.toLowerCase().includes('gender') || 
-            field.label.toLowerCase().includes('sex')
-          );
+      // Collection filter
+      if (selectedCollection !== 'all' && response.collection !== selectedCollection) {
+        return false;
+      }
+      
+      // Date range filter
+      if (dateRange !== 'all') {
+        const responseDate = new Date(response.submittedAt);
+        const now = new Date();
+        const daysAgo = new Date(now.setDate(now.getDate() - parseInt(dateRange)));
+        if (responseDate < daysAgo) {
+          return false;
+        }
+      }
+      
+      // Enhanced search with multiple field filters
+      if (searchTerm.trim()) {
+        // Handle multiple field filters (field1:value1 AND field2:value2)
+        if (searchTerm.includes(' AND ')) {
+          const filterParts = searchTerm.split(' AND ');
+          let allFiltersMatch = true;
           
-          if (!genderField) {
-            return false; // No gender field found in this response
+          for (const filterPart of filterParts) {
+            if (filterPart.includes(':')) {
+              const [fieldName, fieldValue] = filterPart.split(':').map(s => s.trim());
+              
+              const fieldMatch = Object.values(response.responses).some(field => {
+                const fieldLabelMatches = field.label.toLowerCase().includes(fieldName.toLowerCase());
+                if (!fieldLabelMatches) return false;
+                
+                // Special handling for gender fields to prevent "female" matching "male"
+                if (fieldName.toLowerCase().includes('gender') || fieldName.toLowerCase().includes('sex')) {
+                  const actualValue = String(field.value).toLowerCase().trim();
+                  const searchValue = fieldValue.toLowerCase().trim();
+                  return actualValue === searchValue; // EXACT MATCH for gender
+                }
+                
+                // For other fields, use partial matching
+                return String(field.value).toLowerCase().includes(fieldValue.toLowerCase());
+              });
+              
+              if (!fieldMatch) {
+                allFiltersMatch = false;
+                break;
+              }
+            }
           }
           
-          const actualGenderValue = String(genderField.value).toLowerCase().trim();
-          const searchGenderValue = fieldValue.toLowerCase().trim();
+          if (!allFiltersMatch) return false;
+        } 
+        // Handle single field filter
+        else if (searchTerm.includes(':')) {
+          const [fieldName, fieldValue] = searchTerm.split(':').map(s => s.trim());
           
-          // FIX: Use EXACT WORD MATCHING instead of includes()
-          // This prevents "female" matching "male"
-          const isMatch = actualGenderValue === searchGenderValue;
-          
-          console.log('🎯 Gender Filter Check (FIXED):', {
-            responseId: response._id,
-            name: response.responses['name']?.value,
-            fieldLabel: genderField.label,
-            actualValue: genderField.value,
-            normalizedValue: actualGenderValue,
-            searchFor: searchGenderValue,
-            matches: isMatch,
-            bugCheck: `"${actualGenderValue}".includes("${searchGenderValue}") = ${actualGenderValue.includes(searchGenderValue)}`, // This shows the bug
-            fixedCheck: `"${actualGenderValue}" === "${searchGenderValue}" = ${isMatch}` // This shows the fix
+          const hasMatchingField = Object.values(response.responses).some(field => {
+            const fieldLabelMatches = field.label.toLowerCase().includes(fieldName.toLowerCase());
+            if (!fieldLabelMatches) return false;
+            
+            // Special handling for gender fields
+            if (fieldName.toLowerCase().includes('gender') || fieldName.toLowerCase().includes('sex')) {
+              const actualValue = String(field.value).toLowerCase().trim();
+              const searchValue = fieldValue.toLowerCase().trim();
+              return actualValue === searchValue; // EXACT MATCH for gender
+            }
+            
+            // For other fields, use partial matching
+            return String(field.value).toLowerCase().includes(fieldValue.toLowerCase());
           });
           
-          return isMatch; // EXACT MATCH ONLY
-        }
-        
-        // For other field-based searches
-        const hasMatchingField = Object.values(response.responses).some(field => {
-          const fieldLabelMatches = field.label.toLowerCase().includes(fieldName);
-          if (!fieldLabelMatches) return false;
+          if (!hasMatchingField) return false;
+        } 
+        // Global search
+        else {
+          const hasMatchingField = Object.values(response.responses).some(field => 
+            String(field.value).toLowerCase().includes(searchTerm.toLowerCase()) ||
+            field.label.toLowerCase().includes(searchTerm.toLowerCase())
+          );
           
-          // FIX: For other fields too, use exact matching if needed
-          const fieldValueMatches = String(field.value).toLowerCase().includes(fieldValue);
-          return fieldValueMatches;
-        });
-        
-        return hasMatchingField;
-      } 
-      // Global search
-      else {
-        const hasMatchingField = Object.values(response.responses).some(field => 
-          String(field.value).toLowerCase().includes(searchLower) ||
-          field.label.toLowerCase().includes(searchLower)
-        );
-        
-        const metadataMatches = 
-          response.formTitle?.toLowerCase().includes(searchLower) ||
-          response.formName?.toLowerCase().includes(searchLower) ||
-          response.collection?.toLowerCase().includes(searchLower);
-        
-        return hasMatchingField || metadataMatches;
+          const metadataMatches = 
+            response.formTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            response.formName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            response.collection?.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          if (!hasMatchingField && !metadataMatches) return false;
+        }
       }
-    }
-    
-    return true;
-  });
+      
+      return true;
+    });
+
   // Get collection statistics
   const collectionStats = {
     total: responses.length,
@@ -556,6 +560,12 @@ const filteredResponses = responses
     fetchData();
   };
 
+  // Fixed search handler to prevent infinite loops - use useCallback
+  const handleSearchChange = useCallback((term: string) => {
+    setSearchTerm(term);
+    setCurrentPage(1);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-6 flex items-center justify-center">
@@ -613,10 +623,7 @@ const filteredResponses = responses
             setDateRange(range);
             setCurrentPage(1);
           }}
-          onSearchChange={(term) => {
-            setSearchTerm(term);
-            setCurrentPage(1);
-          }}
+          onSearchChange={handleSearchChange} // Fixed: Use the stable handler
           onClearFilters={clearFilters}
           onBulkDelete={bulkDeleteResponses}
           deleting={deleting}
@@ -629,18 +636,15 @@ const filteredResponses = responses
           tableColumns={tableColumns}
           selectedResponses={selectedResponses}
           expandedRow={expandedRow}
-          editingResponse={editingResponse}
           currentPage={currentPage}
           totalPages={totalPages}
           itemsPerPage={itemsPerPage}
+          totalResponses={filteredResponses.length}
           onToggleSelectAll={toggleSelectAll}
           onToggleResponseSelection={toggleResponseSelection}
           onToggleExpand={toggleExpand}
-          onEditResponse={setEditingResponse}
-          onUpdateResponse={updateResponse}
           onDeleteResponse={deleteResponse}
           onPageChange={setCurrentPage}
-          totalResponses={filteredResponses.length} 
         />
       </div>
     </div>
